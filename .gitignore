@@ -19,3 +19,5 @@ career_profile.md
 # Notebook checkpoints and macOS files
 .ipynb_checkpoints/
 .DS_Store
+
+*.egg-info/
