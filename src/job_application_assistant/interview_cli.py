@@ -31,6 +31,7 @@ HELP = """
 Type an answer to continue the interview.
 
 Commands:
+  /new            Start another story while preserving the current draft.
   /draft          Show the current draft profile.
   /review         Prepare a proposal and show its changes.
   /approve UUID   Approve the proposal with the displayed UUID.
@@ -171,6 +172,28 @@ def main() -> None:
                     print(
                         "Interview restarted. Your saved profile "
                         "has been preserved."
+                    )
+                    print(f"\nAssistant: {OPENING_QUESTION}")
+                    continue
+
+                if entry == "/new":
+                    update(
+                        {
+                            "messages": Overwrite(value=[]),
+                            "active_story_uuid": None,
+                            "skipped_topics": [],
+                            "pending_proposal": None,
+                            "status": "collecting",
+                            "last_error": None,
+                        }
+                    )
+                    print(
+                        "Starting another story. All existing draft "
+                        "stories and employment records are preserved."
+                    )
+                    print(
+                        "Any pending review has been cancelled. "
+                        "Use /review again when ready."
                     )
                     print(f"\nAssistant: {OPENING_QUESTION}")
                     continue
