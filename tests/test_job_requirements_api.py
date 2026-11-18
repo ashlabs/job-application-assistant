@@ -179,3 +179,64 @@ def test_api_rejects_result_with_unsupported_excerpt(extraction_api):
         "No extraction result was accepted."
     )
     assert load_capture(database, capture.capture_uuid) == capture
+
+def test_get_before_extraction_returns_null_without_model_call(
+    extraction_api,
+):
+    client, _, capture, extractor = extraction_api
+
+    response = client.get(
+        f"/captures/{capture.capture_uuid}/requirements",
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert extractor.calls == []
+
+
+def test_repeated_post_and_get_reuse_saved_result(extraction_api):
+    client, _, capture, extractor = extraction_api
+    path = f"/captures/{capture.capture_uuid}/requirements"
+
+    first = client.post(path, headers=HEADERS)
+    assert first.status_code == 200
+
+    # Any subsequent model call would fail this test.
+    extractor.error = AssertionError("Unexpected additional model call")
+
+    repeated = client.post(path, headers=HEADERS)
+    restored = client.get(path, headers=HEADERS)
+
+    assert repeated.status_code == 200
+    assert restored.status_code == 200
+    assert repeated.json() == first.json()
+    assert restored.json() == first.json()
+    assert len(extractor.calls) == 1
+
+
+@pytest.mark.parametrize("token", [None, "wrong-token"])
+def test_saved_requirements_get_requires_token(extraction_api, token):
+    client, _, capture, extractor = extraction_api
+    path = f"/captures/{capture.capture_uuid}/requirements"
+    client.post(path, headers=HEADERS)
+    headers = {} if token is None else {"X-Capture-Token": token}
+
+    response = client.get(path, headers=headers)
+
+    assert response.status_code == 401
+    assert len(extractor.calls) == 1
+
+
+def test_get_requirements_for_missing_capture_returns_not_found(
+    extraction_api
+):
+    client, _, _, extractor = extraction_api
+
+    response = client.get(
+        f"/captures/{uuid4()}/requirements",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 404
+    assert extractor.calls == []

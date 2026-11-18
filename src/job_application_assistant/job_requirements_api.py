@@ -1,4 +1,4 @@
-"""Authenticated, on-demand extraction of saved JD requirements."""
+"""Authenticated extraction and retrieval of saved JD requirements."""
 
 import sqlite3
 from collections.abc import Callable
@@ -16,6 +16,10 @@ from job_application_assistant.job_requirements_agent import (
 )
 from job_application_assistant.job_requirements_service import (
     ExtractionConfigurationError
+)
+from job_application_assistant.job_requirements_storage import (
+    load_requirements,
+    save_requirements
 )
 from job_application_assistant.job_requirements_validation import (
     validate_requirements
@@ -35,18 +39,52 @@ def create_requirements_router(
         dependencies=[Depends(require_token)]
     )
 
+    def read_saved(capture_uuid: UUID) -> JobRequirements | None:
+        """Read stored results and translate storage errors."""
+        try:
+            return load_requirements(database, capture_uuid)
+        except KeyError as error:
+            raise HTTPException(
+                status_code=404,
+                detail="Capture not found."
+            ) from error
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(
+                status_code=503,
+                detail="Capture storage is unavailable. Retry later."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=500,
+                detail="Stored requirement or capture data could not be read."
+            ) from error
+
+    @router.get(
+        "/captures/{capture_uuid}/requirements",
+        response_model=JobRequirements | None
+    )
+    def get_requirements(
+        capture_uuid: UUID
+    ) -> JobRequirements | None:
+        """Return stored requirements, or null if not yet extracted."""
+        return read_saved(capture_uuid)
+
     @router.post(
         "/captures/{capture_uuid}/requirements",
         response_model=JobRequirements
     )
     def extract_requirements(capture_uuid: UUID) -> JobRequirements:
-        """Extract requirements only when explicitly requested."""
+        """Reuse saved requirements or extract and persist them."""
+        existing = read_saved(capture_uuid)
+        if existing is not None:
+            return existing
+
         try:
             capture = load_capture(database, capture_uuid)
         except KeyError as error:
             raise HTTPException(
                 status_code=404,
-                detail="Capture not found."
+                detail="Capture not found.",
             ) from error
         except (sqlite3.Error, OSError) as error:
             raise HTTPException(
@@ -70,7 +108,7 @@ def create_requirements_router(
 
         try:
             result = extractor(capture)
-            return validate_requirements(capture, result)
+            validated = validate_requirements(capture, result)
         except ExtractionConfigurationError as error:
             raise HTTPException(
                 status_code=503,
@@ -91,6 +129,27 @@ def create_requirements_router(
                     "The extraction failed validation. "
                     "No extraction result was accepted."
                 )
+            ) from error
+
+        try:
+            return save_requirements(database, validated)
+        except KeyError as error:
+            raise HTTPException(
+                status_code=404,
+                detail="Capture not found."
+            ) from error
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "The extraction could not be saved. "
+                    "Check storage before retrying."
+                )
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=500,
+                detail="The extraction could not be stored safely."
             ) from error
 
     return router
