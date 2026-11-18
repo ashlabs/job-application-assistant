@@ -13,10 +13,16 @@ const ui = {
   time: document.getElementById("job-time"),
   method: document.getElementById("job-method"),
   uuid: document.getElementById("job-uuid"),
-  text: document.getElementById("job-text")
+  text: document.getElementById("job-text"),
+  extract: document.getElementById("extract-requirements"),
+  extractionStatus: document.getElementById("extraction-status"),
+  requirements: document.getElementById("requirements-result"),
+  qualifications: document.getElementById("qualification-list"),
+  constraints: document.getElementById("constraint-list")
 };
 
 let busy = false;
+let selectedCaptureUuid = null;
 
 function showStatus(message, kind = "") {
   ui.status.textContent = message;
@@ -26,6 +32,7 @@ function showStatus(message, kind = "") {
 function setBusy(value) {
   busy = value;
   ui.refresh.disabled = value;
+  ui.extract.disabled = value || selectedCaptureUuid === null;
 
   for (const button of ui.list.querySelectorAll("button")) {
     button.disabled = value;
@@ -40,6 +47,13 @@ function displayTime(value) {
 }
 
 function clearDetail() {
+  selectedCaptureUuid = null;
+  ui.extract.disabled = true;
+  ui.requirements.hidden = true;
+  ui.qualifications.replaceChildren();
+  ui.constraints.replaceChildren();
+  ui.extractionStatus.textContent = "";
+
   ui.detail.hidden = true;
   ui.empty.hidden = false;
 
@@ -48,7 +62,10 @@ function clearDetail() {
   }
 }
 
-async function getJson(path) {
+async function getJson(
+  path,
+  { method = "GET", timeoutMs = 15000 } = {}
+) {
   const settings = await chrome.storage.local.get("captureToken");
   const token = (settings.captureToken || "").trim();
 
@@ -62,15 +79,19 @@ async function getJson(path) {
 
   try {
     response = await fetch(`${API_BASE}${path}`, {
+      method,
       headers: { "X-Capture-Token": token },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(timeoutMs),
       credentials: "omit",
       redirect: "error",
       cache: "no-store"
     });
   } catch {
     throw new Error(
-      "Could not reach the local API. Start the server, then try again."
+      method === "POST"
+        ? "No extraction response was received. The model request may "
+          + "have run. Check the server before starting another extraction."
+        : "Could not reach the local API. Start the server, then try again."
     );
   }
 
@@ -78,8 +99,10 @@ async function getJson(path) {
     const messages = {
       401: "The token was rejected. Update Connection settings in the extension popup.",
       404: "This capture could not be found. Refresh the list.",
+      422: "This capture cannot be extracted. Check its length and identifier.",
       500: "Stored capture data could not be read.",
-      503: "Capture storage is unavailable. Try again later."
+      502: "The model request or source validation failed. No result was accepted.",
+      503: "The service is unavailable. Check the server configuration and storage."
     };
 
     throw new Error(
@@ -120,6 +143,7 @@ async function openCapture(captureUuid, button) {
     ui.uuid.textContent = capture.capture_uuid;
     ui.text.textContent = capture.jd_text;
 
+    selectedCaptureUuid = capture.capture_uuid;
     button.setAttribute("aria-current", "true");
     ui.empty.hidden = true;
     ui.detail.hidden = false;
@@ -185,5 +209,96 @@ async function refreshCaptures() {
   }
 }
 
+function renderRequirementList(container, requirements) {
+  container.replaceChildren();
+
+  if (requirements.length === 0) {
+    const empty = document.createElement("li");
+    empty.textContent = "None extracted.";
+    container.append(empty);
+    return;
+  }
+
+  for (const requirement of requirements) {
+    const item = document.createElement("li");
+    const description = document.createElement("p");
+    const importance = document.createElement("p");
+    const evidence = document.createElement("details");
+    const summary = document.createElement("summary");
+    const excerpt = document.createElement("blockquote");
+
+    description.textContent = requirement.description;
+    importance.textContent = (
+      requirement.importance === "unspecified"
+        ? "Importance: unspecified — needs review"
+        : `Importance: ${requirement.importance}`
+    );
+
+    summary.textContent = "Supporting JD excerpt";
+    excerpt.textContent = requirement.source_excerpt;
+    excerpt.style.whiteSpace = "pre-wrap";
+    excerpt.style.overflowWrap = "anywhere";
+
+    evidence.append(summary, excerpt);
+    item.append(description, importance, evidence);
+    container.append(item);
+  }
+}
+
+async function extractSelectedRequirements() {
+  if (busy || selectedCaptureUuid === null) {
+    return;
+  }
+
+  const captureUuid = selectedCaptureUuid;
+  setBusy(true);
+  ui.requirements.hidden = true;
+  ui.qualifications.replaceChildren();
+  ui.constraints.replaceChildren();
+  ui.extractionStatus.textContent = "Extracting requirements…";
+
+  try {
+    const result = await getJson(
+      `/captures/${encodeURIComponent(captureUuid)}/requirements`,
+      { method: "POST", timeoutMs: 75000 }
+    );
+
+    if (
+      result.capture_uuid !== captureUuid
+      || !Array.isArray(result.requirements)
+    ) {
+      throw new Error("The API returned an unexpected extraction result.");
+    }
+
+    renderRequirementList(
+      ui.qualifications,
+      result.requirements.filter(
+        (requirement) => requirement.kind === "qualification"
+      )
+    );
+    renderRequirementList(
+      ui.constraints,
+      result.requirements.filter(
+        (requirement) => requirement.kind === "constraint"
+      )
+    );
+
+    ui.requirements.hidden = false;
+    ui.extractionStatus.textContent = (
+      `${result.requirements.length} requirements extracted. `
+      + "Review the classifications and source excerpts. "
+      + "Results are not saved yet."
+    );
+  } catch (error) {
+    ui.extractionStatus.textContent = (
+      error.message || "Extraction failed."
+    );
+  } finally {
+    setBusy(false);
+  }
+}
+
 ui.refresh.addEventListener("click", refreshCaptures);
+ui.extract.addEventListener("click", extractSelectedRequirements);
+
 refreshCaptures();

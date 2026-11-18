@@ -77,6 +77,12 @@ Preserve thresholds, durations, alternatives, exceptions, and negation.
 For example, "degree or equivalent experience" is one alternative
 requirement, not two independently mandatory requirements.
 
+Preserve named technical domains when they define the scope of a
+qualification. Do not replace an explicit list with vague phrases such
+as "listed infrastructure areas." Keep the domains in the description.
+Do not turn a list of domains into separate mandatory requirements
+unless the JD explicitly requires each one.
+
 Separate independently assessable qualifications where appropriate.
 Do not split alternatives into separate mandatory items.
 Do not repeat the same requirement in different words.
@@ -85,6 +91,15 @@ Do not turn ordinary job responsibilities, benefits, salary information,
 equal-opportunity statements, or application instructions into candidate
 qualifications. Explicit candidate conditions within application
 instructions may still be practical constraints.
+
+Capture explicitly listed job locations or working-location choices
+as practical constraints, even when they appear outside the
+qualifications sections. Preserve alternative locations together.
+Use unspecified importance unless the JD explicitly makes the location
+condition mandatory or preferred. A statement that applicants may
+share their preferred location does not itself establish importance.
+Do not infer remote eligibility, relocation, or office-attendance
+requirements from location names alone.
 
 Do not evaluate a candidate, invent requirements, or calculate a score.
 If no qualifications or constraints are stated, return an empty list.

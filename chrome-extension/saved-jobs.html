@@ -54,6 +54,43 @@
             <dd id="job-uuid"></dd>
           </dl>
 
+                    <section aria-labelledby="requirements-heading">
+            <h4 id="requirements-heading">Requirements</h4>
+
+            <p id="extraction-help">
+              Extract qualifications and practical constraints from this
+              saved JD. This sends the JD text to the configured AI
+              provider and may incur a usage charge.
+            </p>
+
+            <button
+              id="extract-requirements"
+              type="button"
+              aria-describedby="extraction-help"
+            >
+              Extract requirements
+            </button>
+
+            <p
+              id="extraction-status"
+              role="status"
+              aria-live="polite"
+            ></p>
+
+            <div id="requirements-result" hidden>
+              <p>
+                AI-extracted requirements. Review the classifications
+                and supporting excerpts against the original JD.
+              </p>
+
+              <h4>Qualifications</h4>
+              <ul id="qualification-list"></ul>
+
+              <h4>Practical constraints</h4>
+              <ul id="constraint-list"></ul>
+            </div>
+          </section>
+
           <h4>Job description</h4>
           <div id="job-text"></div>
         </article>
