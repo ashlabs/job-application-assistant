@@ -23,6 +23,7 @@ const ui = {
 
 let busy = false;
 let selectedCaptureUuid = null;
+let requirementsLoaded = false;
 
 function showStatus(message, kind = "") {
   ui.status.textContent = message;
@@ -32,7 +33,9 @@ function showStatus(message, kind = "") {
 function setBusy(value) {
   busy = value;
   ui.refresh.disabled = value;
-  ui.extract.disabled = value || selectedCaptureUuid === null;
+  ui.extract.disabled = (
+    value || selectedCaptureUuid === null || requirementsLoaded
+  );
 
   for (const button of ui.list.querySelectorAll("button")) {
     button.disabled = value;
@@ -47,6 +50,8 @@ function displayTime(value) {
 }
 
 function clearDetail() {
+  requirementsLoaded = false;
+  ui.extract.textContent = "Extract requirements";
   selectedCaptureUuid = null;
   ui.extract.disabled = true;
   ui.requirements.hidden = true;
@@ -114,6 +119,37 @@ async function getJson(
   return response.json();
 }
 
+function displayRequirements(result, captureUuid) {
+  if (
+    result.capture_uuid !== captureUuid
+    || !Array.isArray(result.requirements)
+  ) {
+    throw new Error("The API returned an unexpected extraction result.");
+  }
+
+  renderRequirementList(
+    ui.qualifications,
+    result.requirements.filter(
+      (requirement) => requirement.kind === "qualification"
+    )
+  );
+  renderRequirementList(
+    ui.constraints,
+    result.requirements.filter(
+      (requirement) => requirement.kind === "constraint"
+    )
+  );
+
+  requirementsLoaded = true;
+  ui.extract.textContent = "Requirements saved";
+  ui.requirements.hidden = false;
+  ui.extractionStatus.textContent = (
+    `${result.requirements.length} saved AI-extracted requirements. `
+    + "Review the classifications and supporting excerpts. "
+    + "Saved does not mean user-approved."
+  );
+}
+
 async function openCapture(captureUuid, button) {
   if (busy) {
     return;
@@ -148,7 +184,28 @@ async function openCapture(captureUuid, button) {
     ui.empty.hidden = true;
     ui.detail.hidden = false;
     showStatus("Capture loaded.");
+
+    ui.extractionStatus.textContent = "Checking for saved requirements…";
+
+    try {
+      const saved = await getJson(
+        `/captures/${encodeURIComponent(captureUuid)}/requirements`
+      );
+
+      if (saved === null) {
+        ui.extractionStatus.textContent = (
+          "No saved extraction. Click Extract requirements to create one."
+        );
+      } else {
+        displayRequirements(saved, captureUuid);
+      }
+    } catch (error) {
+      ui.extractionStatus.textContent = (
+        error.message || "Could not check saved requirements."
+      );
+    }
   } catch (error) {
+    clearDetail();
     showStatus(error.message || "Could not load the capture.", "error");
   } finally {
     setBusy(false);
@@ -246,7 +303,7 @@ function renderRequirementList(container, requirements) {
 }
 
 async function extractSelectedRequirements() {
-  if (busy || selectedCaptureUuid === null) {
+  if (busy || selectedCaptureUuid === null || requirementsLoaded) {
     return;
   }
 
@@ -255,7 +312,7 @@ async function extractSelectedRequirements() {
   ui.requirements.hidden = true;
   ui.qualifications.replaceChildren();
   ui.constraints.replaceChildren();
-  ui.extractionStatus.textContent = "Extracting requirements…";
+  ui.extractionStatus.textContent = "Extracting and saving requirements…";
 
   try {
     const result = await getJson(
@@ -263,32 +320,7 @@ async function extractSelectedRequirements() {
       { method: "POST", timeoutMs: 75000 }
     );
 
-    if (
-      result.capture_uuid !== captureUuid
-      || !Array.isArray(result.requirements)
-    ) {
-      throw new Error("The API returned an unexpected extraction result.");
-    }
-
-    renderRequirementList(
-      ui.qualifications,
-      result.requirements.filter(
-        (requirement) => requirement.kind === "qualification"
-      )
-    );
-    renderRequirementList(
-      ui.constraints,
-      result.requirements.filter(
-        (requirement) => requirement.kind === "constraint"
-      )
-    );
-
-    ui.requirements.hidden = false;
-    ui.extractionStatus.textContent = (
-      `${result.requirements.length} requirements extracted. `
-      + "Review the classifications and source excerpts. "
-      + "Results are not saved yet."
-    );
+    displayRequirements(result, captureUuid);
   } catch (error) {
     ui.extractionStatus.textContent = (
       error.message || "Extraction failed."
