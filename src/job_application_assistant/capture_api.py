@@ -24,6 +24,10 @@ from job_application_assistant.job_requirements_api import (
 from job_application_assistant.job_requirements_service import (
     extract_capture_requirements
 )
+from job_application_assistant.profile_match_api import (
+    create_profile_match_router
+)
+from job_application_assistant.profile_match_service import ProfileAssessor
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,7 +60,9 @@ def create_app(
     api_token: str | None = None,
     requirements_extractor: RequirementsExtractor = (
         extract_capture_requirements
-    )
+    ),
+    profile_path: Path | None = None,
+    profile_assessor: ProfileAssessor | None = None
 ) -> FastAPI:
     """Build the local capture API."""
     if api_token is None:
@@ -175,5 +181,20 @@ def create_app(
             extractor=requirements_extractor
         )
     )
-    
+
+    configured_profile = (
+        profile_path
+        if profile_path is not None
+        else ROOT / "data/private/profile/career_profile.md"
+    )
+
+    app.include_router(
+        create_profile_match_router(
+            database=database,
+            profile_path=configured_profile,
+            require_token=require_token,
+            assessor=profile_assessor
+        )
+    )
+
     return app
