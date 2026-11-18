@@ -17,6 +17,13 @@ from job_application_assistant.job_capture_storage import (
     load_capture,
     save_capture
 )
+from job_application_assistant.job_requirements_api import (
+    RequirementsExtractor,
+    create_requirements_router
+)
+from job_application_assistant.job_requirements_service import (
+    extract_capture_requirements
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +54,9 @@ class CaptureReceipt(BaseModel):
 def create_app(
     database_path: Path | None = None,
     api_token: str | None = None,
+    requirements_extractor: RequirementsExtractor = (
+        extract_capture_requirements
+    )
 ) -> FastAPI:
     """Build the local capture API."""
     if api_token is None:
@@ -158,4 +168,12 @@ def create_app(
                 detail="Stored capture data could not be read."
             ) from error
 
+    app.include_router(
+        create_requirements_router(
+            database=database,
+            require_token=require_token,
+            extractor=requirements_extractor
+        )
+    )
+    
     return app
