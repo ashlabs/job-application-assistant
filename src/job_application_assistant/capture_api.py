@@ -182,11 +182,18 @@ def create_app(
         )
     )
 
-    configured_profile = (
-        profile_path
-        if profile_path is not None
-        else ROOT / "data/private/profile/career_profile.md"
-    )
+    if profile_path is not None:
+        configured_profile = profile_path
+    else:
+        profile_settings = dotenv_values(ROOT / ".env")
+        configured_path = (
+            profile_settings.get("CAREER_PROFILE_PATH") or ""
+        ).strip()
+        configured_profile = (
+            ROOT / configured_path
+            if configured_path
+            else ROOT / "data/private/profile/career_profile.md"
+        ).resolve()
 
     app.include_router(
         create_profile_match_router(

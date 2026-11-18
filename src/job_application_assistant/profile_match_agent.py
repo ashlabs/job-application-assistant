@@ -109,6 +109,17 @@ Do not cite identifier fields as evidence.
 Use the allowed evidence-field names supplied in the context.
 
 INTERPRETATION
+Apply material thresholds before awarding any positive classification.
+For requirements specifying years, neither strong_match nor
+transferable_experience is allowed unless the profile establishes
+the requested duration for the direct or analogous experience.
+Otherwise classify evidence_missing and explain the related experience
+and the missing duration.
+
+Transferable experience requires a concrete analogy to the requested
+capability. Generic product work alone does not establish an analogy
+to technical-product conception-to-launch experience.
+
 Respect alternatives such as "degree or equivalent experience."
 Do not require both sides of an alternative.
 For combined requirements, do not claim a strong match if only one

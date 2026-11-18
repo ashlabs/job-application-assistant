@@ -90,7 +90,52 @@
               <ul id="constraint-list"></ul>
             </div>
           </section>
+                    <section aria-labelledby="match-heading">
+            <h4 id="match-heading">Documented profile match</h4>
 
+            <p id="match-help">
+              Compare these qualifications with your saved career profile.
+              This sends profile evidence and qualifications to the
+              configured AI provider and may incur a usage charge.
+            </p>
+
+            <button
+              id="assess-profile-match"
+              type="button"
+              aria-describedby="match-help"
+              disabled
+            >
+              Assess profile match
+            </button>
+
+            <p
+              id="match-status"
+              role="status"
+              aria-live="polite"
+            ></p>
+
+            <div id="match-result" hidden>
+              <p id="match-percentage"></p>
+              <p id="match-calculation"></p>
+
+              <p>
+                This percentage measures documented qualification
+                alignment. It is not a hiring probability or an
+                employer's ATS score.
+              </p>
+
+              <p id="match-exclusions"></p>
+
+              <h4>Qualification assessments</h4>
+              <ul id="assessment-list"></ul>
+
+              <p>
+                Practical constraints are shown separately above.
+                They are excluded from this percentage and have not
+                been assessed against your circumstances.
+              </p>
+            </div>
+          </section>
           <h4>Job description</h4>
           <div id="job-text"></div>
         </article>

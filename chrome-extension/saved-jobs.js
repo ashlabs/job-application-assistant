@@ -18,12 +18,26 @@ const ui = {
   extractionStatus: document.getElementById("extraction-status"),
   requirements: document.getElementById("requirements-result"),
   qualifications: document.getElementById("qualification-list"),
-  constraints: document.getElementById("constraint-list")
+  constraints: document.getElementById("constraint-list"),
+  assess: document.getElementById("assess-profile-match"),
+  matchStatus: document.getElementById("match-status"),
+  matchResult: document.getElementById("match-result"),
+  percentage: document.getElementById("match-percentage"),
+  calculation: document.getElementById("match-calculation"),
+  exclusions: document.getElementById("match-exclusions"),
+  assessments: document.getElementById("assessment-list")
+};
+
+const CLASSIFICATION_LABELS = {
+  strong_match: "Strong match",
+  transferable_experience: "Transferable experience",
+  evidence_missing: "Evidence missing",
+  confirmed_gap: "Confirmed gap"
 };
 
 let busy = false;
 let selectedCaptureUuid = null;
-let requirementsLoaded = false;
+let currentRequirements = null;
 
 function showStatus(message, kind = "") {
   ui.status.textContent = message;
@@ -34,7 +48,10 @@ function setBusy(value) {
   busy = value;
   ui.refresh.disabled = value;
   ui.extract.disabled = (
-    value || selectedCaptureUuid === null || requirementsLoaded
+    value || selectedCaptureUuid === null || currentRequirements !== null
+  );
+  ui.assess.disabled = (
+    value || selectedCaptureUuid === null || currentRequirements === null
   );
 
   for (const button of ui.list.querySelectorAll("button")) {
@@ -49,16 +66,29 @@ function displayTime(value) {
     : date.toLocaleString();
 }
 
+function clearMatch() {
+  ui.matchStatus.textContent = "";
+  ui.matchResult.hidden = true;
+  ui.percentage.textContent = "";
+  ui.calculation.textContent = "";
+  ui.exclusions.textContent = "";
+  ui.assessments.replaceChildren();
+}
+
 function clearDetail() {
-  requirementsLoaded = false;
-  ui.extract.textContent = "Extract requirements";
   selectedCaptureUuid = null;
+  currentRequirements = null;
+
   ui.extract.disabled = true;
+  ui.extract.textContent = "Extract requirements";
+  ui.assess.disabled = true;
+
   ui.requirements.hidden = true;
   ui.qualifications.replaceChildren();
   ui.constraints.replaceChildren();
   ui.extractionStatus.textContent = "";
 
+  clearMatch();
   ui.detail.hidden = true;
   ui.empty.hidden = false;
 
@@ -94,29 +124,72 @@ async function getJson(
   } catch {
     throw new Error(
       method === "POST"
-        ? "No extraction response was received. The model request may "
-          + "have run. Check the server before starting another extraction."
+        ? "No response was received. The model request may have run. "
+          + "Check the server before starting another request."
         : "Could not reach the local API. Start the server, then try again."
     );
   }
 
   if (!response.ok) {
-    const messages = {
-      401: "The token was rejected. Update Connection settings in the extension popup.",
-      404: "This capture could not be found. Refresh the list.",
-      422: "This capture cannot be extracted. Check its length and identifier.",
-      500: "Stored capture data could not be read.",
-      502: "The model request or source validation failed. No result was accepted.",
-      503: "The service is unavailable. Check the server configuration and storage."
-    };
+    let detail = null;
+
+    try {
+      const body = await response.json();
+      if (typeof body.detail === "string") {
+        detail = body.detail;
+      }
+    } catch {
+      // Fall back to the HTTP status when no readable detail exists.
+    }
+
+    if (response.status === 401) {
+      throw new Error(
+        "The token was rejected. Update Connection settings in the extension popup."
+      );
+    }
 
     throw new Error(
-      messages[response.status]
-      || `Request failed with HTTP ${response.status}.`
+      detail || `Request failed with HTTP ${response.status}.`
     );
   }
 
   return response.json();
+}
+
+function renderRequirementList(container, requirements) {
+  container.replaceChildren();
+
+  if (requirements.length === 0) {
+    const empty = document.createElement("li");
+    empty.textContent = "None extracted.";
+    container.append(empty);
+    return;
+  }
+
+  for (const requirement of requirements) {
+    const item = document.createElement("li");
+    const description = document.createElement("p");
+    const importance = document.createElement("p");
+    const evidence = document.createElement("details");
+    const summary = document.createElement("summary");
+    const excerpt = document.createElement("blockquote");
+
+    description.textContent = requirement.description;
+    importance.textContent = (
+      requirement.importance === "unspecified"
+        ? "Importance: unspecified — needs review"
+        : `Importance: ${requirement.importance}`
+    );
+
+    summary.textContent = "Supporting JD excerpt";
+    excerpt.textContent = requirement.source_excerpt;
+    excerpt.style.whiteSpace = "pre-wrap";
+    excerpt.style.overflowWrap = "anywhere";
+
+    evidence.append(summary, excerpt);
+    item.append(description, importance, evidence);
+    container.append(item);
+  }
 }
 
 function displayRequirements(result, captureUuid) {
@@ -140,7 +213,7 @@ function displayRequirements(result, captureUuid) {
     )
   );
 
-  requirementsLoaded = true;
+  currentRequirements = result;
   ui.extract.textContent = "Requirements saved";
   ui.requirements.hidden = false;
   ui.extractionStatus.textContent = (
@@ -237,10 +310,8 @@ async function refreshCaptures() {
 
       button.type = "button";
       button.disabled = true;
-
       title.className = "job-list-title";
       title.textContent = capture.page_title || capture.source_url;
-
       time.className = "job-list-time";
       time.textContent = displayTime(capture.captured_at);
 
@@ -266,49 +337,14 @@ async function refreshCaptures() {
   }
 }
 
-function renderRequirementList(container, requirements) {
-  container.replaceChildren();
-
-  if (requirements.length === 0) {
-    const empty = document.createElement("li");
-    empty.textContent = "None extracted.";
-    container.append(empty);
-    return;
-  }
-
-  for (const requirement of requirements) {
-    const item = document.createElement("li");
-    const description = document.createElement("p");
-    const importance = document.createElement("p");
-    const evidence = document.createElement("details");
-    const summary = document.createElement("summary");
-    const excerpt = document.createElement("blockquote");
-
-    description.textContent = requirement.description;
-    importance.textContent = (
-      requirement.importance === "unspecified"
-        ? "Importance: unspecified — needs review"
-        : `Importance: ${requirement.importance}`
-    );
-
-    summary.textContent = "Supporting JD excerpt";
-    excerpt.textContent = requirement.source_excerpt;
-    excerpt.style.whiteSpace = "pre-wrap";
-    excerpt.style.overflowWrap = "anywhere";
-
-    evidence.append(summary, excerpt);
-    item.append(description, importance, evidence);
-    container.append(item);
-  }
-}
-
 async function extractSelectedRequirements() {
-  if (busy || selectedCaptureUuid === null || requirementsLoaded) {
+  if (busy || selectedCaptureUuid === null || currentRequirements !== null) {
     return;
   }
 
   const captureUuid = selectedCaptureUuid;
   setBusy(true);
+  clearMatch();
   ui.requirements.hidden = true;
   ui.qualifications.replaceChildren();
   ui.constraints.replaceChildren();
@@ -319,7 +355,6 @@ async function extractSelectedRequirements() {
       `/captures/${encodeURIComponent(captureUuid)}/requirements`,
       { method: "POST", timeoutMs: 75000 }
     );
-
     displayRequirements(result, captureUuid);
   } catch (error) {
     ui.extractionStatus.textContent = (
@@ -330,7 +365,166 @@ async function extractSelectedRequirements() {
   }
 }
 
+function renderAssessment(assessment, requirement) {
+  const item = document.createElement("li");
+  const heading = document.createElement("p");
+  const classification = document.createElement("p");
+  const explanation = document.createElement("p");
+
+  heading.textContent = requirement.description;
+  classification.textContent = (
+    `${CLASSIFICATION_LABELS[assessment.classification]} `
+    + `— ${requirement.importance}`
+  );
+  explanation.textContent = assessment.explanation;
+
+  item.append(heading, classification, explanation);
+
+  if (assessment.evidence.length === 0) {
+    const missing = document.createElement("p");
+    missing.textContent = "No supporting profile excerpt cited.";
+    item.append(missing);
+  } else {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Supporting profile evidence";
+    details.append(summary);
+
+    for (const evidence of assessment.evidence) {
+      const reference = document.createElement("p");
+      const excerpt = document.createElement("blockquote");
+
+      reference.textContent = (
+        `${evidence.record_type}: ${evidence.record_uuid} `
+        + `— field: ${evidence.field_name}`
+      );
+      reference.style.overflowWrap = "anywhere";
+      excerpt.textContent = evidence.excerpt;
+      excerpt.style.whiteSpace = "pre-wrap";
+      excerpt.style.overflowWrap = "anywhere";
+
+      details.append(reference, excerpt);
+    }
+
+    item.append(details);
+  }
+
+  return item;
+}
+
+function displayMatch(report, captureUuid) {
+  const match = report.match;
+  const score = report.score;
+
+  if (
+    !match
+    || !score
+    || match.capture_uuid !== captureUuid
+    || !Array.isArray(match.assessments)
+    || !Array.isArray(score.unspecified_qualification_uuids)
+    || !Array.isArray(score.constraint_uuids)
+  ) {
+    throw new Error("The API returned an unexpected match report.");
+  }
+
+  const percentage = score.percentage;
+  if (
+    percentage !== null
+    && (
+      typeof percentage !== "number"
+      || !Number.isFinite(percentage)
+      || percentage < 0
+      || percentage > 100
+    )
+  ) {
+    throw new Error("The API returned an invalid percentage.");
+  }
+
+  const requirementsById = new Map(
+    currentRequirements.requirements.map(
+      (requirement) => [requirement.requirement_uuid, requirement]
+    )
+  );
+  const fragment = document.createDocumentFragment();
+
+  for (const assessment of match.assessments) {
+    const requirement = requirementsById.get(assessment.requirement_uuid);
+
+    if (
+      !requirement
+      || requirement.kind !== "qualification"
+      || !Object.hasOwn(
+        CLASSIFICATION_LABELS,
+        assessment.classification
+      )
+      || !Array.isArray(assessment.evidence)
+    ) {
+      throw new Error("The report contains an unexpected assessment.");
+    }
+
+    fragment.append(renderAssessment(assessment, requirement));
+  }
+
+  if (match.assessments.length === 0) {
+    const empty = document.createElement("li");
+    empty.textContent = "No qualifications to assess.";
+    fragment.append(empty);
+  }
+
+  ui.assessments.replaceChildren(fragment);
+  ui.percentage.textContent = (
+    percentage === null
+      ? "Documented match: Not available"
+      : `Documented match: ${percentage.toFixed(1)}%`
+  );
+  ui.calculation.textContent = (
+    `${score.earned_weighted_credit} of `
+    + `${score.possible_weighted_credit} weighted credits across `
+    + `${score.scored_qualification_count} scored qualifications.`
+  );
+  ui.exclusions.textContent = (
+    `Excluded from the percentage: `
+    + `${score.unspecified_qualification_uuids.length} qualifications `
+    + `with unspecified importance and `
+    + `${score.constraint_uuids.length} practical constraints.`
+  );
+
+  ui.matchResult.hidden = false;
+}
+
+async function assessSelectedProfile() {
+  if (busy || selectedCaptureUuid === null || currentRequirements === null) {
+    return;
+  }
+
+  const captureUuid = selectedCaptureUuid;
+  setBusy(true);
+  clearMatch();
+  ui.matchStatus.textContent = "Assessing the saved career profile…";
+
+  try {
+    const report = await getJson(
+      `/captures/${encodeURIComponent(captureUuid)}/profile-match`,
+      { method: "POST", timeoutMs: 75000 }
+    );
+
+    displayMatch(report, captureUuid);
+    ui.matchStatus.textContent = (
+      "Assessment complete. Review the explanations and profile evidence. "
+      + "This match report is not saved yet."
+    );
+  } catch (error) {
+    ui.matchResult.hidden = true;
+    ui.matchStatus.textContent = (
+      error.message || "Profile assessment failed."
+    );
+  } finally {
+    setBusy(false);
+  }
+}
+
 ui.refresh.addEventListener("click", refreshCaptures);
 ui.extract.addEventListener("click", extractSelectedRequirements);
+ui.assess.addEventListener("click", assessSelectedProfile);
 
 refreshCaptures();
