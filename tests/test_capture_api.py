@@ -184,3 +184,77 @@ def test_storage_failure_returns_service_unavailable(tmp_path):
     assert response.json()["detail"] == (
         "Capture storage is unavailable. Retry later."
     )
+
+def test_list_captures_returns_empty_before_first_save(api):
+    client, database = api
+
+    response = client.get("/captures", headers=auth_headers())
+
+    assert response.status_code == 200
+    assert response.json() == []
+    assert not database.exists()
+
+
+def test_list_and_detail_return_saved_capture(api):
+    client, _ = api
+    payload = make_request()
+
+    saved = client.post(
+        "/captures", json=payload, headers=auth_headers()
+    )
+    assert saved.status_code == 201
+
+    listing = client.get("/captures", headers=auth_headers())
+    assert listing.status_code == 200
+    assert len(listing.json()) == 1
+
+    capture_uuid = payload["capture"]["capture_uuid"]
+    detail = client.get(
+        f"/captures/{capture_uuid}",
+        headers=auth_headers()
+    )
+
+    assert detail.status_code == 200
+    assert detail.json() == listing.json()[0]
+    assert detail.json()["capture_uuid"] == capture_uuid
+    assert detail.json()["jd_text"] == payload["capture"]["jd_text"]
+    assert detail.json()["source_url"] == payload["capture"]["source_url"]
+
+
+@pytest.mark.parametrize("token", [None, "incorrect-token"])
+@pytest.mark.parametrize(
+    "path",
+    ["/captures", f"/captures/{uuid4()}"]
+)
+def test_read_endpoints_require_token(api, token, path):
+    client, database = api
+    headers = {} if token is None else {"X-Capture-Token": token}
+
+    response = client.get(path, headers=headers)
+
+    assert response.status_code == 401
+    assert not database.exists()
+
+
+def test_missing_capture_detail_returns_not_found(api):
+    client, database = api
+
+    response = client.get(
+        f"/captures/{uuid4()}",
+        headers=auth_headers()
+    )
+
+    assert response.status_code == 404
+    assert not database.exists()
+
+
+def test_invalid_capture_identifier_rejected(api):
+    client, database = api
+
+    response = client.get(
+        "/captures/not-a-uuid",
+        headers=auth_headers()
+    )
+
+    assert response.status_code == 422
+    assert not database.exists()

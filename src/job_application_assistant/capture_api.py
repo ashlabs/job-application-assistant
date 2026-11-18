@@ -1,4 +1,4 @@
-"""Local API for saving user-confirmed job descriptions."""
+"""Local API for saving and retrieving job-description captures."""
 
 import sqlite3
 from pathlib import Path
@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from job_application_assistant.job_capture import JobCapture
 from job_application_assistant.job_capture_storage import (
     CaptureConflictError,
+    list_captures,
+    load_capture,
     save_capture
 )
 
@@ -36,7 +38,7 @@ class CaptureRequest(BaseModel):
 
 
 class CaptureReceipt(BaseModel):
-    """Report whether the capture was newly saved or already present."""
+    """Report whether a capture was newly saved or already present."""
 
     capture_uuid: UUID
     status: Literal["created", "already_saved"]
@@ -44,7 +46,7 @@ class CaptureReceipt(BaseModel):
 
 def create_app(
     database_path: Path | None = None,
-    api_token: str | None = None
+    api_token: str | None = None,
 ) -> FastAPI:
     """Build the local capture API."""
     if api_token is None:
@@ -110,5 +112,50 @@ def create_app(
             capture_uuid=request.capture.capture_uuid,
             status="created" if created else "already_saved"
         )
+
+    @app.get(
+        "/captures",
+        response_model=list[JobCapture],
+        dependencies=[Depends(require_token)],
+    )
+    def get_captures() -> list[JobCapture]:
+        """List saved captures, newest first."""
+        try:
+            return list_captures(database)
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(
+                status_code=503,
+                detail="Capture storage is unavailable. Retry later."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=500,
+                detail="Stored capture data could not be read."
+            ) from error
+
+    @app.get(
+        "/captures/{capture_uuid}",
+        response_model=JobCapture,
+        dependencies=[Depends(require_token)]
+    )
+    def get_capture(capture_uuid: UUID) -> JobCapture:
+        """Retrieve one saved capture."""
+        try:
+            return load_capture(database, capture_uuid)
+        except KeyError as error:
+            raise HTTPException(
+                status_code=404,
+                detail="Capture not found."
+            ) from error
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(
+                status_code=503,
+                detail="Capture storage is unavailable. Retry later."
+            ) from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=500,
+                detail="Stored capture data could not be read."
+            ) from error
 
     return app

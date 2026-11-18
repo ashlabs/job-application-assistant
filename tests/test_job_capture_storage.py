@@ -9,7 +9,8 @@ from job_application_assistant.job_capture import JobCapture
 from job_application_assistant.job_capture_storage import (
     CaptureConflictError,
     load_capture,
-    save_capture
+    save_capture,
+    list_captures
 )
 
 
@@ -83,3 +84,32 @@ def test_loading_missing_database_does_not_create_it(tmp_path):
         load_capture(database, uuid4())
 
     assert not database.exists()
+
+def test_listing_missing_database_returns_empty_without_creating_it(tmp_path):
+    database = tmp_path / "missing.sqlite"
+
+    assert list_captures(database) == []
+    assert not database.exists()
+
+
+def test_listing_preserves_captures_and_orders_by_actual_time(tmp_path):
+    database = tmp_path / "captures.sqlite"
+
+    older_data = make_capture().model_dump(mode="json")
+    older_data["captured_at"] = "2026-11-18T10:00:00+02:00"
+    older = JobCapture.model_validate(older_data)
+
+    newer_data = make_capture().model_dump(mode="json")
+    newer_data["captured_at"] = "2026-11-18T07:00:00-08:00"
+    newer = JobCapture.model_validate(newer_data)
+
+    # Insert newest first so insertion order cannot explain the result.
+    save_capture(database, newer)
+    save_capture(database, older)
+
+    captures = list_captures(database)
+
+    # 07:00 at UTC-8 is later than 10:00 at UTC+2.
+    assert captures == [newer, older]
+    assert load_capture(database, older.capture_uuid) == older
+    assert load_capture(database, newer.capture_uuid) == newer

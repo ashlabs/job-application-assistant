@@ -107,3 +107,48 @@ def load_capture(
         )
 
     return capture
+
+def list_captures(database_path: Path) -> list[JobCapture]:
+    """Return saved captures ordered by capture time, newest first."""
+    if not database_path.exists():
+        return []
+
+    with closing(sqlite3.connect(database_path, timeout=10)) as connection:
+        table = connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'job_captures'
+            """
+        ).fetchone()
+
+        if table is None:
+            return []
+
+        rows = connection.execute(
+            """
+            SELECT capture_uuid, payload
+            FROM job_captures
+            """
+        ).fetchall()
+
+    captures = []
+
+    for stored_uuid, payload in rows:
+        capture = JobCapture.model_validate_json(payload)
+
+        if str(capture.capture_uuid) != stored_uuid:
+            raise CaptureConflictError(
+                "Stored capture identifier does not match its content."
+            )
+
+        captures.append(capture)
+
+    return sorted(
+        captures,
+        key=lambda capture: (
+            capture.captured_at,
+            str(capture.capture_uuid)
+        ),
+        reverse=True
+    )
