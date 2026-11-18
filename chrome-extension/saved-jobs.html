@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saved job descriptions</title>
+  <link rel="stylesheet" href="saved-jobs.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Saved job descriptions</h1>
+        <p>Select a capture to review its text and source metadata.</p>
+      </div>
+
+      <button id="refresh-jobs" type="button">
+        Refresh
+      </button>
+    </header>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <div class="workspace">
+      <section aria-labelledby="list-heading">
+        <h2 id="list-heading">Captures</h2>
+        <ul id="job-list"></ul>
+      </section>
+
+      <section aria-labelledby="detail-heading">
+        <h2 id="detail-heading">Capture details</h2>
+        <p id="empty-detail">Select a capture from the list.</p>
+
+        <article id="job-detail" hidden>
+          <h3 id="job-title"></h3>
+
+          <dl>
+            <dt>Source</dt>
+            <dd>
+              <a
+                id="job-source"
+                target="_blank"
+                rel="noopener noreferrer"
+              ></a>
+            </dd>
+
+            <dt>Captured at</dt>
+            <dd id="job-time"></dd>
+
+            <dt>Capture method</dt>
+            <dd id="job-method"></dd>
+
+            <dt>Capture UUID</dt>
+            <dd id="job-uuid"></dd>
+          </dl>
+
+          <h4>Job description</h4>
+          <div id="job-text"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script src="saved-jobs.js" defer></script>
+</body>
+</html>

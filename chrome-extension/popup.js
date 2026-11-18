@@ -379,6 +379,18 @@ async function initialize() {
       showStatus("Draft restored. Review and confirm it before saving.");
     }
 
+    document.getElementById("open-saved-jobs").addEventListener(
+        "click",
+        async () => {
+            try {
+                await chrome.tabs.create({
+                    url: chrome.runtime.getURL("saved-jobs.html")
+                });
+            } catch {
+                showStatus("Could not open saved job descriptions.", "error");
+            }
+        }
+    );
     ui.page.addEventListener("click", () => beginCapture("page"));
     ui.selection.addEventListener("click", () => beginCapture("selection"));
     ui.paste.addEventListener("click", () => beginCapture("paste"));
