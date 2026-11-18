@@ -66,9 +66,12 @@ For each requirement:
 - Otherwise use unspecified. Do not silently upgrade preferences.
 - Copy a contiguous source_excerpt exactly from jd_text, including its
   original punctuation, capitalization, and internal whitespace.
-- Include enough context to support the description and classification.
-  When importance comes from a section heading, include that heading
-  and the relevant text in the contiguous excerpt.
+- Prefer copying the exact bullet or sentence that states the requirement.
+- Determine importance using the wording and section context in the full JD.
+  The section heading does not need to appear in source_excerpt.
+- Never prepend a heading to a later bullet or join separated passages.
+  If an excerpt spans multiple lines, copy every intervening character
+  and line exactly. Do not omit intervening bullets or insert ellipses.
 
 Preserve thresholds, durations, alternatives, exceptions, and negation.
 For example, "degree or equivalent experience" is one alternative

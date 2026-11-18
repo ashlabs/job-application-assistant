@@ -47,7 +47,8 @@ def validate_requirements(
         if requirement.source_excerpt not in validated_capture.jd_text:
             raise ValueError(
                 f"Requirement {requirement.requirement_uuid} "
-                "has an excerpt absent from the captured JD."
+                "has an excerpt absent from the captured JD. "
+                f"Returned excerpt: {requirement.source_excerpt!r}"
             )
 
     return validated
