@@ -118,3 +118,27 @@ def test_invalid_guide_is_rejected(guide_case, problem):
 
     with pytest.raises(ValueError):
         validate_guide(guide, profile, requirements, bundle)
+
+def test_recruiter_guidance_is_separate_from_company_sources(guide_case):
+    from job_application_assistant.interview_guide import generate_guide
+    import json
+
+    guide, profile, requirements, bundle = guide_case
+    guidance = "Recruiter: one remote conversation, not an onsite loop."
+
+    class FakeModel:
+        def with_structured_output(self, schema, **kwargs):
+            assert schema is InterviewGuide
+            return self
+
+        def invoke(self, messages):
+            context = json.loads(messages[-1].content)
+            assert context["recruiter_guidance"] == guidance
+            assert "takes precedence" in messages[0].content
+            return guide
+
+    result = generate_guide(FakeModel(), profile, requirements, bundle, guidance)
+    rendered = render_guide(result, bundle, guidance)
+    assert "Recruiter guidance — user supplied" in rendered
+    assert guidance in rendered
+    assert result.documented_hiring_information == []

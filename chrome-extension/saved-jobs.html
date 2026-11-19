@@ -168,6 +168,40 @@
                 before use.</p>
             </div>
           </section>
+          <section aria-labelledby="preparation-heading">
+            <h4 id="preparation-heading">Company research and interview guide</h4>
+            <p>First capture and review official company pages. Then generate
+              a job-specific guide from those sources and your approved profile.</p>
+            <label for="preparation-urls">Official source URLs — one per line</label>
+            <textarea id="preparation-urls" rows="3"
+              style="display:block;width:100%;box-sizing:border-box"
+              placeholder="https://about.google/"></textarea>
+            <label style="display:block">
+              <input id="preparation-official" type="checkbox">
+              I verified that these URLs are official company sources.
+            </label>
+            <p>Source capture requests these web pages and does not call AI.</p>
+            <button id="preparation-capture" type="button">1. Capture sources</button>
+            <p id="preparation-source-status" role="status" aria-live="polite"></p>
+            <div id="preparation-sources"></div>
+            <label id="preparation-review-label" hidden>
+              <input id="preparation-reviewed" type="checkbox">
+              I reviewed the captured sources for this job.
+            </label>
+            <label for="preparation-recruiter" style="display:block">
+              Recruiter guidance (optional; takes precedence over general hiring information)
+            </label>
+            <textarea id="preparation-recruiter" rows="3" maxlength="12000"
+              style="display:block;width:100%;box-sizing:border-box"></textarea>
+            <p>Guide generation sends approved career evidence, job requirements,
+              captured source text, and any recruiter guidance to the configured
+              AI provider and may incur a usage charge.</p>
+            <button id="preparation-generate" type="button" disabled>
+              2. Generate interview guide
+            </button>
+            <p id="preparation-guide-status" role="status" aria-live="polite"></p>
+            <div id="preparation-guide"></div>
+          </section>
           <h4>Job description</h4>
           <div id="job-text"></div>
         </article>
@@ -177,5 +211,6 @@
 
   <script src="saved-jobs.js" defer></script>
   <script src="resume-ui.js" defer></script>
+  <script src="preparation-ui.js" defer></script>
 </body>
 </html>

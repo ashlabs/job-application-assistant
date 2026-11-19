@@ -69,6 +69,13 @@ Use only the supplied research for company and hiring claims.
 Use only the approved career profile for candidate claims.
 Never copy job requirements into the candidate's experience.
 
+RECRUITER GUIDANCE
+User-provided recruiter guidance takes precedence over general company hiring
+information for this application. Do not treat it as candidate evidence.
+Keep hiring notes limited to source-supported general information and omit
+notes that conflict with recruiter guidance. Do not invent source citations
+for user-provided guidance.
+
 COMPANY AND HIRING NOTES
 Provide up to four concise company notes and up to six hiring notes.
 Each note must cite an existing source UUID and a short exact contiguous
@@ -241,7 +248,7 @@ def validate_guide(guide, profile, requirements, bundle):
     return guide
 
 
-def generate_guide(llm, profile, requirements, bundle):
+def generate_guide(llm, profile, requirements, bundle, recruiter_guidance=""):
     """Generate a bounded guide without changing approved facts."""
     validate_sources(bundle)
     if (
@@ -256,11 +263,14 @@ def generate_guide(llm, profile, requirements, bundle):
     ):
         raise ValueError("Extract job qualifications first.")
 
+    if len(recruiter_guidance) > 12000:
+        raise ValueError("Recruiter guidance exceeds 12,000 characters.")
     context = json.dumps(
         {
             "approved_profile": profile.model_dump(mode="json"),
             "job_requirements": requirements.model_dump(mode="json"),
             "research": bundle,
+            "recruiter_guidance": recruiter_guidance,
             "allowed_evidence_fields": {
                 "role": sorted(ROLE_EVIDENCE_FIELDS),
                 "story": sorted(STORY_EVIDENCE_FIELDS),
@@ -286,7 +296,7 @@ def generate_guide(llm, profile, requirements, bundle):
     return validate_guide(guide, profile, requirements, bundle)
 
 
-def render_guide(guide, bundle):
+def render_guide(guide, bundle, recruiter_guidance=""):
     """Render source links and clearly labeled generated preparation."""
     sources = validate_sources(bundle)
     lines = [
@@ -296,6 +306,12 @@ def render_guide(guide, bundle):
         "of the company's interview questions.",
         "",
     ]
+    if recruiter_guidance.strip():
+        lines.extend([
+            "## Recruiter guidance — user supplied", "",
+            "Takes precedence over general company hiring information.",
+            "", recruiter_guidance.strip(), "",
+        ])
     for heading, notes in [
         ("Company context — sourced", guide.company_notes),
         (
