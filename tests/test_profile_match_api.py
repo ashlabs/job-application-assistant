@@ -332,3 +332,133 @@ def test_get_saved_report_requires_token(match_api, token):
 
     assert response.status_code == 401
     assert len(calls) == 1
+
+
+def test_summary_reports_unassessed_job_without_model_call(match_api):
+    client, _, _, capture, calls, _ = match_api
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "capture_uuid": str(capture.capture_uuid),
+            "status": "not_assessed",
+            "percentage": None
+        }
+    ]
+    assert calls == []
+
+
+def test_summary_includes_saved_zero_percentage(match_api):
+    client, _, _, capture, calls, behavior = match_api
+
+    saved = client.post(
+        f"/captures/{capture.capture_uuid}/profile-match",
+        headers=HEADERS
+    )
+    assert saved.status_code == 200
+
+    behavior["error"] = OpenAIError("Summary must not call the model")
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "capture_uuid": str(capture.capture_uuid),
+            "status": "assessed",
+            "percentage": 0.0
+        }
+    ]
+    assert len(calls) == 1
+
+
+def test_summary_excludes_match_from_previous_profile(match_api):
+    client, _, profile_path, capture, calls, _ = match_api
+
+    saved = client.post(
+        f"/captures/{capture.capture_uuid}/profile-match",
+        headers=HEADERS
+    )
+    assert saved.status_code == 200
+
+    changed_profile = CareerProfile.model_validate(
+        {
+            "roles": [
+                {
+                    "employer": "Example Company",
+                    "job_title": "Product Manager"
+                }
+            ],
+            "stories": []
+        }
+    )
+    profile_path.write_text(
+        profile_to_markdown(changed_profile),
+        encoding="utf-8"
+    )
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["status"] == "not_assessed"
+    assert response.json()[0]["percentage"] is None
+    assert len(calls) == 1
+
+
+def test_summary_distinguishes_missing_profile(match_api):
+    client, _, profile_path, capture, calls, _ = match_api
+    profile_path.unlink()
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "capture_uuid": str(capture.capture_uuid),
+            "status": "profile_unavailable",
+            "percentage": None
+        }
+    ]
+    assert calls == []
+
+
+def test_summary_rejects_invalid_profile(match_api):
+    client, _, profile_path, _, calls, _ = match_api
+    profile_path.write_text("Invalid profile.", encoding="utf-8")
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 422
+    assert calls == []
+
+
+@pytest.mark.parametrize("token", [None, "wrong-token"])
+def test_summary_requires_token(match_api, token):
+    client, _, _, _, calls, _ = match_api
+    headers = {} if token is None else {"X-Capture-Token": token}
+
+    response = client.get(
+        "/capture-match-summaries",
+        headers=headers
+    )
+
+    assert response.status_code == 401
+    assert calls == []
+

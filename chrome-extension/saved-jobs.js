@@ -317,6 +317,70 @@ async function openCapture(captureUuid, button) {
   }
 }
 
+async function loadListMatchSummaries() {
+  const labels = ui.list.querySelectorAll("[data-match-capture]");
+
+  try {
+    const summaries = await getJson("/capture-match-summaries");
+
+    if (!Array.isArray(summaries)) {
+      throw new Error("Unexpected match summary response.");
+    }
+
+    const byId = new Map();
+
+    for (const summary of summaries) {
+      if (
+        !summary
+        || typeof summary.capture_uuid !== "string"
+        || byId.has(summary.capture_uuid)
+        || !["assessed", "not_assessed", "profile_unavailable"].includes(
+          summary.status
+        )
+        || (
+          summary.percentage !== null
+          && (
+            typeof summary.percentage !== "number"
+            || !Number.isFinite(summary.percentage)
+            || summary.percentage < 0
+            || summary.percentage > 100
+          )
+        )
+        || (
+          summary.status !== "assessed"
+          && summary.percentage !== null
+        )
+      ) {
+        throw new Error("Invalid match summary response.");
+      }
+
+      byId.set(summary.capture_uuid, summary);
+    }
+
+    for (const label of labels) {
+      const summary = byId.get(label.dataset.matchCapture);
+
+      if (!summary) {
+        label.textContent = "Match unavailable — refresh the list.";
+      } else if (summary.status === "profile_unavailable") {
+        label.textContent = "Profile unavailable";
+      } else if (summary.status === "not_assessed") {
+        label.textContent = "Not assessed";
+      } else {
+        label.textContent = (
+          summary.percentage === null
+            ? "Match: Not available"
+            : `Documented match: ${summary.percentage.toFixed(1)}%`
+        );
+      }
+    }
+  } catch {
+    for (const label of labels) {
+      label.textContent = "Match unavailable — refresh to retry.";
+    }
+  }
+}
+
 async function refreshCaptures() {
   if (busy) {
     return;
@@ -347,13 +411,22 @@ async function refreshCaptures() {
       time.className = "job-list-time";
       time.textContent = displayTime(capture.captured_at);
 
-      button.append(title, time);
+      const matchLabel = document.createElement("span");
+      matchLabel.dataset.matchCapture = capture.capture_uuid;
+      matchLabel.style.display = "block";
+      matchLabel.textContent = "Checking saved match…";
+
+      button.append(title, time, matchLabel);
       button.addEventListener("click", () =>
         openCapture(capture.capture_uuid, button)
       );
 
       item.append(button);
       ui.list.append(item);
+    }
+
+    if (captures.length > 0) {
+      await loadListMatchSummaries();
     }
 
     showStatus(
@@ -546,6 +619,7 @@ async function assessSelectedProfile() {
       + "Review the explanations and profile evidence. "
       + "Saved does not mean user-approved."
     );
+    await loadListMatchSummaries();
   } catch (error) {
     ui.matchResult.hidden = true;
     ui.matchStatus.textContent = (

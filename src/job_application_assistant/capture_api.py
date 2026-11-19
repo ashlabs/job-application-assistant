@@ -28,6 +28,10 @@ from job_application_assistant.profile_match_api import (
     create_profile_match_router
 )
 from job_application_assistant.profile_match_service import ProfileAssessor
+from job_application_assistant.profile_match_summary import (
+    MatchSummary,
+    list_match_summaries
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -203,5 +207,33 @@ def create_app(
             assessor=profile_assessor
         )
     )
+
+    @app.get(
+        "/capture-match-summaries",
+        response_model=list[MatchSummary],
+        dependencies=[Depends(require_token)]
+    )
+    def get_match_summaries() -> list[MatchSummary]:
+        """List current saved match percentages without model calls."""
+        try:
+            return list_match_summaries(
+                database, configured_profile
+            )
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Match summaries are unavailable. "
+                    "Check storage and the saved career profile."
+                )
+            ) from error
+        except (ValueError, KeyError) as error:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Match summaries could not be validated. "
+                    "Check the saved profile and job data, then refresh."
+                )
+            ) from error
 
     return app
