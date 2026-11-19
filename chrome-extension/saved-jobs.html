@@ -141,6 +141,33 @@
               </p>
             </div>
           </section>
+          <section aria-labelledby="resume-heading">
+            <h4 id="resume-heading">Resume preparation</h4>
+            <p>Generate from your approved profile for this job. Generation
+              sends profile evidence and job requirements to the configured
+              AI provider and may incur a usage charge.</p>
+            <label for="resume-name">Candidate name</label>
+            <input id="resume-name" maxlength="120" autocomplete="name">
+            <button id="resume-generate" type="button">Generate new draft</button>
+            <p id="resume-status" role="status" aria-live="polite"></p>
+            <div id="resume-review" hidden>
+              <pre id="resume-text" style="white-space:pre-wrap"></pre>
+              <details>
+                <summary>Approved profile evidence and selected records</summary>
+                <pre id="resume-evidence" style="white-space:pre-wrap"></pre>
+              </details>
+              <label>
+                <input id="resume-confirm" type="checkbox">
+                I reviewed this exact draft and its supporting evidence.
+              </label>
+              <button id="resume-approve" type="button" disabled>Approve draft</button>
+              <button id="resume-export" type="button" disabled>Prepare DOCX and PDF</button>
+              <div id="resume-downloads"></div>
+              <p>For factual corrections, update and approve the career
+                profile, then generate a new draft. Review exported layouts
+                before use.</p>
+            </div>
+          </section>
           <h4>Job description</h4>
           <div id="job-text"></div>
         </article>
@@ -149,5 +176,6 @@
   </main>
 
   <script src="saved-jobs.js" defer></script>
+  <script src="resume-ui.js" defer></script>
 </body>
 </html>

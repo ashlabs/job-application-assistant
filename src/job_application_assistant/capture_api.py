@@ -10,6 +10,7 @@ from dotenv import dotenv_values
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from job_application_assistant.resume_api import create_resume_router
 from job_application_assistant.job_capture import JobCapture
 from job_application_assistant.job_capture_storage import (
     CaptureConflictError,
@@ -205,6 +206,14 @@ def create_app(
             profile_path=configured_profile,
             require_token=require_token,
             assessor=profile_assessor
+        )
+    )
+
+    app.include_router(
+        create_resume_router(
+            database=database,
+            profile_path=configured_profile,
+            require_token=require_token
         )
     )
 

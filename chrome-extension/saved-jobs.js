@@ -113,6 +113,7 @@ function clearMatch() {
 }
 
 function clearDetail() {
+  document.dispatchEvent(new CustomEvent("resume-capture-cleared"));
   selectedCaptureUuid = null;
   currentRequirements = null;
 
@@ -321,6 +322,9 @@ async function openCapture(captureUuid, button) {
     ui.text.textContent = capture.jd_text;
 
     selectedCaptureUuid = capture.capture_uuid;
+    document.dispatchEvent(new CustomEvent("resume-capture-opened", {
+      detail: { captureUuid: capture.capture_uuid }
+    }));
     button.setAttribute("aria-current", "true");
     ui.empty.hidden = true;
     ui.detail.hidden = false;
