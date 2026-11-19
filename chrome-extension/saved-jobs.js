@@ -578,6 +578,29 @@ function renderAssessment(assessment, requirement) {
     item.append(details);
   }
 
+  if (assessment.classification === "evidence_missing") {
+    const clarification = document.createElement("details");
+    const summary = document.createElement("summary");
+    const question = document.createElement("p");
+    const guidance = document.createElement("p");
+
+    summary.textContent = "Clarify this qualification";
+    question.textContent = (
+      `What facts from your background help assess: `
+      + `${requirement.description}`
+    );
+    guidance.textContent = (
+      "Describe your relevant experience or education in the career "
+      + "interview, including dates and your personal contribution where "
+      + "relevant. State explicitly if you do not meet the requirement, "
+      + "or leave it unresolved if you are unsure. Review and approve "
+      + "any profile changes, then return here and reassess."
+    );
+
+    clarification.append(summary, question, guidance);
+    item.append(clarification);
+  }
+
   return item;
 }
 
