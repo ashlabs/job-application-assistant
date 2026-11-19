@@ -25,7 +25,8 @@ const ui = {
   percentage: document.getElementById("match-percentage"),
   calculation: document.getElementById("match-calculation"),
   exclusions: document.getElementById("match-exclusions"),
-  assessments: document.getElementById("assessment-list")
+  assessments: document.getElementById("assessment-list"),
+  sort: document.getElementById("job-sort")
 };
 
 const CLASSIFICATION_LABELS = {
@@ -38,6 +39,42 @@ const CLASSIFICATION_LABELS = {
 let busy = false;
 let selectedCaptureUuid = null;
 let currentRequirements = null;
+let listMatchSummaries = new Map();
+
+function sortJobList() {
+  const items = Array.from(ui.list.children);
+
+  function percentage(item) {
+    const summary = listMatchSummaries.get(item.dataset.captureUuid);
+    return (
+      summary?.status === "assessed"
+      && typeof summary.percentage === "number"
+      && Number.isFinite(summary.percentage)
+    ) ? summary.percentage : null;
+  }
+
+  items.sort((a, b) => {
+    if (ui.sort.value === "match") {
+      const aScore = percentage(a);
+      const bScore = percentage(b);
+
+      if (aScore === null && bScore !== null) return 1;
+      if (aScore !== null && bScore === null) return -1;
+      if (aScore !== null && bScore !== null && aScore !== bScore) {
+        return bScore - aScore;
+      }
+    }
+
+    return (
+      Number(b.dataset.capturedAt) - Number(a.dataset.capturedAt)
+      || a.dataset.captureUuid.localeCompare(b.dataset.captureUuid)
+    );
+  });
+
+  for (const item of items) {
+    ui.list.append(item);
+  }
+}
 
 function showStatus(message, kind = "") {
   ui.status.textContent = message;
@@ -357,6 +394,8 @@ async function loadListMatchSummaries() {
       byId.set(summary.capture_uuid, summary);
     }
 
+    listMatchSummaries = byId;
+    sortJobList();
     for (const label of labels) {
       const summary = byId.get(label.dataset.matchCapture);
 
@@ -393,6 +432,8 @@ async function loadListMatchSummaries() {
       }
     }
   } catch {
+    listMatchSummaries = new Map();
+    sortJobList();
     for (const label of labels) {
       label.textContent = "Match unavailable — refresh to retry.";
     }
@@ -407,6 +448,7 @@ async function refreshCaptures() {
   setBusy(true);
   clearDetail();
   ui.list.replaceChildren();
+  listMatchSummaries = new Map();
   showStatus("Loading saved captures…");
 
   try {
@@ -418,6 +460,10 @@ async function refreshCaptures() {
 
     for (const capture of captures) {
       const item = document.createElement("li");
+      item.dataset.captureUuid = capture.capture_uuid;
+      item.dataset.capturedAt = String(
+        Date.parse(capture.captured_at) || 0
+      );
       const button = document.createElement("button");
       const title = document.createElement("span");
       const time = document.createElement("span");
@@ -652,4 +698,5 @@ ui.refresh.addEventListener("click", refreshCaptures);
 ui.extract.addEventListener("click", extractSelectedRequirements);
 ui.assess.addEventListener("click", assessSelectedProfile);
 
+ui.sort.addEventListener("change", sortJobList);
 refreshCaptures();
