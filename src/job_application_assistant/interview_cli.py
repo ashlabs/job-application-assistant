@@ -210,10 +210,14 @@ def main() -> None:
                         state["draft_profile"]
                     )
 
-                    if not profile.roles and not profile.stories:
+                    if not (
+                        profile.roles
+                        or profile.stories
+                        or profile.education
+                    ):
                         print(
-                            "Capture some career experience before "
-                            "preparing a review."
+                            "Capture some career experience or education "
+                            "before preparing a review."
                         )
                         continue
 
