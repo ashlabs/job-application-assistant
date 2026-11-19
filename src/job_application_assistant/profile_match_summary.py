@@ -36,6 +36,7 @@ class MatchSummary(BaseModel):
         "profile_unavailable"
     ]
     percentage: float | None = None
+    missing_evidence_count: int | None = None
 
 
 def list_match_summaries(
@@ -87,7 +88,11 @@ def list_match_summaries(
             MatchSummary(
                 capture_uuid=capture.capture_uuid,
                 status="assessed",
-                percentage=score.percentage
+                percentage=score.percentage,
+                missing_evidence_count=sum(
+                    assessment.classification == "evidence_missing"
+                    for assessment in match.assessments
+                )
             )
         )
 

@@ -347,7 +347,8 @@ def test_summary_reports_unassessed_job_without_model_call(match_api):
         {
             "capture_uuid": str(capture.capture_uuid),
             "status": "not_assessed",
-            "percentage": None
+            "percentage": None,
+            "missing_evidence_count": None
         }
     ]
     assert calls == []
@@ -374,7 +375,8 @@ def test_summary_includes_saved_zero_percentage(match_api):
         {
             "capture_uuid": str(capture.capture_uuid),
             "status": "assessed",
-            "percentage": 0.0
+            "percentage": 0.0,
+            "missing_evidence_count": 1
         }
     ]
     assert len(calls) == 1
@@ -430,7 +432,8 @@ def test_summary_distinguishes_missing_profile(match_api):
         {
             "capture_uuid": str(capture.capture_uuid),
             "status": "profile_unavailable",
-            "percentage": None
+            "percentage": None,
+            "missing_evidence_count": None
         }
     ]
     assert calls == []

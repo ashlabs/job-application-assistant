@@ -372,6 +372,14 @@ async function loadListMatchSummaries() {
             ? "Match: Not available"
             : `Documented match: ${summary.percentage.toFixed(1)}%`
         );
+        const missingCount = summary.missing_evidence_count;
+        if (Number.isInteger(missingCount) && missingCount >= 0) {
+          label.textContent += (
+            ` · ${missingCount} qualification`
+            + `${missingCount === 1 ? "" : "s"} need`
+            + `${missingCount === 1 ? "s" : ""} clarification`
+          );
+        }
       }
     }
   } catch {
