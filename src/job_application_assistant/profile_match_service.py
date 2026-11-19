@@ -21,6 +21,10 @@ from job_application_assistant.profile_match_scoring import (
 from job_application_assistant.profile_match_validation import (
     profile_revision
 )
+from job_application_assistant.profile_match_storage import (
+    load_profile_match,
+    save_profile_match
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -98,3 +102,62 @@ def assess_saved_profile(
         match=match,
         score=score
     )
+
+def load_saved_match_report(
+    database: Path,
+    profile_path: Path,
+    requirements: JobRequirements
+) -> ProfileMatchReport | None:
+    """Load a report for the current saved profile and requirements."""
+    profile = load_saved_profile(profile_path)
+    original_revision = profile_revision(profile)
+
+    match = load_profile_match(database, profile, requirements)
+
+    if match is None:
+        return None
+
+    score = score_profile_match(profile, requirements, match)
+
+    if (
+        profile_revision(load_saved_profile(profile_path))
+        != original_revision
+    ):
+        raise ValueError(
+            "The saved profile changed while loading the report."
+        )
+
+    return ProfileMatchReport(match=match, score=score)
+
+
+def save_match_report(
+    database: Path,
+    profile_path: Path,
+    requirements: JobRequirements,
+    report: ProfileMatchReport
+) -> ProfileMatchReport:
+    """Validate against the saved profile before storing a match."""
+    profile = load_saved_profile(profile_path)
+
+    # Validate sources and evidence; never trust a supplied score.
+    score_profile_match(profile, requirements, report.match)
+
+    saved_match = save_profile_match(
+        database,
+        profile,
+        requirements,
+        report.match
+    )
+
+    score = score_profile_match(profile, requirements, saved_match)
+
+    if (
+        profile_revision(load_saved_profile(profile_path))
+        != saved_match.profile_sha256
+    ):
+        raise ValueError(
+            "The saved profile changed while saving the report. "
+            "Assess it again."
+        )
+
+    return ProfileMatchReport(match=saved_match, score=score)

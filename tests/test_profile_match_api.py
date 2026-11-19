@@ -213,3 +213,122 @@ def test_invalid_assessment_returns_no_report(match_api):
 
     assert response.status_code == 502
     assert "score" not in response.json()
+
+
+def test_get_before_assessment_returns_null_without_model_call(match_api):
+    client, _, _, capture, calls, _ = match_api
+
+    response = client.get(
+        f"/captures/{capture.capture_uuid}/profile-match",
+        headers=HEADERS
+    )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert calls == []
+
+
+def test_repeated_assessment_reuses_saved_report(match_api):
+    client, _, _, capture, calls, behavior = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+
+    first = client.post(path, headers=HEADERS)
+    assert first.status_code == 200
+
+    # Any further model call would fail this request.
+    behavior["error"] = OpenAIError("Model must not be called again")
+
+    second = client.post(path, headers=HEADERS)
+
+    assert second.status_code == 200
+    assert second.json() == first.json()
+    assert len(calls) == 1
+
+
+def test_saved_report_survives_application_reopening(match_api):
+    client, database, profile_path, capture, calls, _ = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+
+    first = client.post(path, headers=HEADERS)
+    assert first.status_code == 200
+
+    def forbidden_assessor(profile, requirements):
+        pytest.fail("Reading a saved report must not call the model.")
+
+    reopened_app = create_app(
+        database_path=database,
+        api_token=HEADERS["X-Capture-Token"],
+        profile_path=profile_path,
+        profile_assessor=forbidden_assessor
+    )
+
+    with TestClient(reopened_app) as reopened_client:
+        response = reopened_client.get(path, headers=HEADERS)
+
+    assert response.status_code == 200
+    assert response.json() == first.json()
+    assert len(calls) == 1
+
+
+def test_changed_profile_requires_new_assessment(match_api):
+    client, database, profile_path, capture, calls, _ = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+
+    first = client.post(path, headers=HEADERS)
+    assert first.status_code == 200
+
+    changed_profile = CareerProfile.model_validate(
+        {
+            "roles": [
+                {
+                    "employer": "Example Company",
+                    "job_title": "Product Manager"
+                }
+            ],
+            "stories": []
+        }
+    )
+    profile_path.write_text(
+        profile_to_markdown(changed_profile),
+        encoding="utf-8"
+    )
+
+    stale_read = client.get(path, headers=HEADERS)
+
+    assert stale_read.status_code == 200
+    assert stale_read.json() is None
+    assert len(calls) == 1
+
+    second = client.post(path, headers=HEADERS)
+
+    assert second.status_code == 200
+    assert len(calls) == 2
+    assert second.json()["match"]["profile_sha256"] == (
+        profile_revision(changed_profile)
+    )
+    assert second.json()["match"]["profile_sha256"] != (
+        first.json()["match"]["profile_sha256"]
+    )
+
+    # Both versions remain stored.
+    with sqlite3.connect(database) as connection:
+        count = connection.execute(
+            "SELECT COUNT(*) FROM profile_matches"
+        ).fetchone()[0]
+
+    assert count == 2
+
+
+@pytest.mark.parametrize("token", [None, "wrong-token"])
+def test_get_saved_report_requires_token(match_api, token):
+    client, _, _, capture, calls, _ = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+
+    saved = client.post(path, headers=HEADERS)
+    assert saved.status_code == 200
+
+    headers = {} if token is None else {"X-Capture-Token": token}
+    response = client.get(path, headers=headers)
+
+    assert response.status_code == 401
+    assert len(calls) == 1

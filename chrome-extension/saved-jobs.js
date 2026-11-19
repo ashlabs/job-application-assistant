@@ -223,6 +223,37 @@ function displayRequirements(result, captureUuid) {
   );
 }
 
+async function loadSavedMatch(captureUuid) {
+  clearMatch();
+  ui.matchStatus.textContent = "Checking for a saved match report…";
+
+  try {
+    const report = await getJson(
+      `/captures/${encodeURIComponent(captureUuid)}/profile-match`
+    );
+
+    if (report === null) {
+      ui.matchStatus.textContent = (
+        "No saved match for the current profile and requirements. "
+        + "Click Assess profile match to create one."
+      );
+      return;
+    }
+
+    displayMatch(report, captureUuid);
+    ui.matchStatus.textContent = (
+      "Saved match report loaded. "
+      + "Review the explanations and profile evidence. "
+      + "Saved does not mean user-approved."
+    );
+  } catch (error) {
+    ui.matchResult.hidden = true;
+    ui.matchStatus.textContent = (
+      error.message || "Could not load the saved match report."
+    );
+  }
+}
+
 async function openCapture(captureUuid, button) {
   if (busy) {
     return;
@@ -271,6 +302,7 @@ async function openCapture(captureUuid, button) {
         );
       } else {
         displayRequirements(saved, captureUuid);
+        await loadSavedMatch(captureUuid)
       }
     } catch (error) {
       ui.extractionStatus.textContent = (
@@ -510,8 +542,9 @@ async function assessSelectedProfile() {
 
     displayMatch(report, captureUuid);
     ui.matchStatus.textContent = (
-      "Assessment complete. Review the explanations and profile evidence. "
-      + "This match report is not saved yet."
+      "Match report saved or reused for the current profile and requirements. "
+      + "Review the explanations and profile evidence. "
+      + "Saved does not mean user-approved."
     );
   } catch (error) {
     ui.matchResult.hidden = true;
