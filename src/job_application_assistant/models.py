@@ -1,6 +1,6 @@
 """Validated records for career experience capture."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from pydantic import (
@@ -54,6 +54,26 @@ class ExperienceStory(BaseModel):
     result: NonEmptyText | None = None
     reflection: NonEmptyText | None = None
 
+class EducationRecord(BaseModel):
+    """Education explicitly described by the user."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+    )
+
+    education_uuid: UUID = Field(default_factory=uuid4)
+    qualification: NonEmptyText
+    institution: NonEmptyText | None = None
+    field_of_study: NonEmptyText | None = None
+    status: Literal[
+        "completed",
+        "in_progress",
+        "not_completed",
+        "unknown",
+    ] = "unknown"
+    completion_date: NonEmptyText | None = None
+
 class CareerProfile(BaseModel):
     """Career records with validated identifiers and role references."""
 
@@ -64,6 +84,7 @@ class CareerProfile(BaseModel):
 
     roles: list[EmploymentRecord] = Field(default_factory=list)
     stories: list[ExperienceStory] = Field(default_factory=list)
+    education: list[EducationRecord] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_record_links(self) -> "CareerProfile":
@@ -82,6 +103,13 @@ class CareerProfile(BaseModel):
                 )
 
         known_roles = set(role_ids)
+        education_ids = [
+            record.education_uuid for record in self.education
+        ]
+        if len(education_ids) != len(set(education_ids)):
+            raise ValueError(
+                "Education records have duplicate education_uuid values."
+            )
 
         for story in self.stories:
             if (

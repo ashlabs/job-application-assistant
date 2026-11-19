@@ -15,6 +15,7 @@ from job_application_assistant.models import (
     ExperienceStory,
 )
 from job_application_assistant.profile_markdown import profile_to_markdown
+from job_application_assistant.education_capture import EducationUpdate
 
 
 class FakeModel:
@@ -228,3 +229,144 @@ def test_contradictory_current_role_dates_leave_draft_unchanged():
     assert result["status"] == "error"
     assert "draft_profile" not in result
     assert state["draft_profile"] == original
+
+def make_education_update(**updates):
+    """Build an education update with unspecified fields left null."""
+    data = {
+        name: None
+        for name in EducationUpdate.model_fields
+    }
+    data.update(updates)
+    return EducationUpdate.model_validate(data)
+
+
+def test_education_only_answer_preserves_active_story():
+    profile = make_saved_profile()
+    original = profile.model_dump(mode="json")
+    state = new_interview_state(profile_to_markdown(profile))
+    state["active_story_uuid"] = str(profile.stories[0].story_uuid)
+    state["messages"] = [
+        HumanMessage(
+            content="I completed a Bachelor of Science in Computer "
+            "Science at Example University in 2010."
+        )
+    ]
+
+    turn = make_turn(
+        education_update=make_education_update(
+            qualification="Bachelor of Science",
+            institution="Example University",
+            field_of_study="Computer Science",
+            status="completed",
+            completion_date="2010"
+        )
+    )
+    result = create_interview_step(FakeModel(turn))(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert updated.roles == profile.roles
+    assert updated.stories == profile.stories
+    assert result["active_story_uuid"] == state["active_story_uuid"]
+    assert len(updated.education) == 1
+    assert updated.education[0].status == "completed"
+    assert updated.education[0].completion_date == "2010"
+    assert state["draft_profile"] == original
+
+
+def test_education_capture_does_not_create_a_story():
+    state = new_interview_state()
+    state["messages"] = [
+        HumanMessage(
+            content="I am studying for a Master of Science."
+        )
+    ]
+    turn = make_turn(
+        education_update=make_education_update(
+            qualification="Master of Science",
+            status="in_progress"
+        )
+    )
+
+    result = create_interview_step(FakeModel(turn))(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert updated.roles == []
+    assert updated.stories == []
+    assert result["active_story_uuid"] is None
+    assert updated.education[0].status == "in_progress"
+    assert updated.education[0].completion_date is None
+
+
+def test_education_correction_preserves_identifier():
+    from job_application_assistant.models import EducationRecord
+
+    record = EducationRecord(
+        qualification="Master of Science",
+        institution="Example University",
+        status="completed",
+        completion_date="2020"
+    )
+    profile = CareerProfile(education=[record])
+    state = new_interview_state(profile_to_markdown(profile))
+    state["messages"] = [
+        HumanMessage(
+            content="Correction: I stopped that program without completing it."
+        )
+    ]
+    turn = make_turn(
+        education_update=make_education_update(
+            existing_education_uuid=str(record.education_uuid),
+            status="not_completed"
+        )
+    )
+
+    result = create_interview_step(FakeModel(turn))(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert len(updated.education) == 1
+    assert updated.education[0].education_uuid == record.education_uuid
+    assert updated.education[0].qualification == record.qualification
+    assert updated.education[0].institution == record.institution
+    assert updated.education[0].status == "not_completed"
+    assert updated.education[0].completion_date is None
+    assert profile.education[0].status == "completed"
+
+
+def test_unknown_education_reference_leaves_draft_unchanged():
+    profile = make_saved_profile()
+    original = profile.model_dump(mode="json")
+    state = new_interview_state(profile_to_markdown(profile))
+    turn = make_turn(
+        education_update=make_education_update(
+            existing_education_uuid=str(uuid4()),
+            status="completed"
+        )
+    )
+
+    result = create_interview_step(FakeModel(turn))(state)
+
+    assert result["status"] == "error"
+    assert "draft_profile" not in result
+    assert state["draft_profile"] == original
+
+
+def test_unfinished_study_rejects_completion_date():
+    state = new_interview_state()
+    original = CareerProfile.model_validate(
+        state["draft_profile"]
+    ).model_dump(mode="json")
+    turn = make_turn(
+        education_update=make_education_update(
+            qualification="Master of Science",
+            status="in_progress",
+            completion_date="2027"
+        )
+    )
+
+    result = create_interview_step(FakeModel(turn))(state)
+
+    assert result["status"] == "error"
+    assert "draft_profile" not in result
+    assert CareerProfile.model_validate(
+        state["draft_profile"]
+    ).model_dump(mode="json") == original

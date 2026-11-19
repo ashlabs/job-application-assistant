@@ -16,7 +16,7 @@ class ProfileEvidence(BaseModel):
         validate_assignment=True
     )
 
-    record_type: Literal["role", "story"]
+    record_type: Literal["role", "story", "education"]
     record_uuid: UUID
     field_name: NonEmptyText
     excerpt: NonEmptyText

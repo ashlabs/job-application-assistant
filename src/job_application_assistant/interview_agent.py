@@ -12,6 +12,10 @@ from job_application_assistant.models import (
     EmploymentRecord,
     ExperienceStory
 )
+from job_application_assistant.education_capture import (
+    EducationUpdate,
+    apply_education_update
+)
 
 
 class StoryTurn(BaseModel):
@@ -33,6 +37,7 @@ class StoryTurn(BaseModel):
     result: str | None
     reflection: str | None
 
+    education_update: EducationUpdate | None
     next_question: str
 
 
@@ -96,6 +101,35 @@ correction, return null for employer, job_title, and existing_role_uuid.
 After linking the story, ask for missing employment dates or current
 status, one question at a time, before continuing with missing STAR
 details. Respect skipped topics and accept unknown dates.
+
+EDUCATION
+Capture education explicitly supplied by the user in education_update.
+Return null when no new education facts were supplied.
+Handle one education record per turn; ask about remaining records later.
+
+For a new record, supply its qualification. Leave unknown details null.
+For an existing record, use its exact existing_education_uuid.
+When answering a follow-up about an education record, identify that record
+from the conversation and supplied education_records. Never invent an ID.
+If the intended record is ambiguous, return education_update=null and ask
+which record the user means.
+
+Use completed only when the user explicitly states graduation or award.
+Use in_progress for ongoing study and not_completed for study the user
+states they stopped without completing. Otherwise use unknown.
+Record completion_date only for actually completed study.
+An expected graduation date is not a completion date.
+Preserve year-only dates when only a year is supplied.
+Never infer degree equivalence, institution, or subject.
+
+Education facts belong in education_update, not in employment or story
+fields. For an education-only answer, leave all story and employment
+fields null and preserve the active story.
+
+After the active story and its role are sufficiently covered, ask about
+education if none is recorded, unless the user skipped that topic.
+Ask for missing education details one at a time; accept unknown answers.
+Do not prevent the user from requesting review with incomplete information.
 
 QUESTIONS
 Ask one concise question at a time, based on missing or unclear details.
@@ -232,6 +266,10 @@ def create_interview_step(llm):
                         role.model_dump(mode="json")
                         for role in profile.roles
                     ],
+                    "education_records": [
+                        record.model_dump(mode="json")
+                        for record in profile.education
+                    ],
                     "skipped_topics": state["skipped_topics"]
                 }
             )
@@ -261,7 +299,8 @@ def create_interview_step(llm):
                     "next_question",
                     "start_date",
                     "end_date",
-                    "is_current"
+                    "is_current",
+                    "education_update"
                 }
             )
             updates = {
@@ -379,6 +418,12 @@ def create_interview_step(llm):
                 active_id = str(story.story_uuid)
 
             profile = CareerProfile.model_validate(profile_data)
+
+            if turn.education_update is not None:
+                profile = apply_education_update(
+                    profile,
+                    turn.education_update
+                )
 
             return {
                 "draft_profile": profile.model_dump(mode="json"),

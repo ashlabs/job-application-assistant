@@ -17,6 +17,7 @@ from job_application_assistant.profile_match import (
 from job_application_assistant.profile_match_validation import (
     ROLE_EVIDENCE_FIELDS,
     STORY_EVIDENCE_FIELDS,
+    EDUCATION_EVIDENCE_FIELDS,
     profile_revision,
     requirements_revision,
     validate_profile_match
@@ -31,7 +32,7 @@ class EvidenceResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    record_type: Literal["role", "story"]
+    record_type: Literal["role", "story", "education"]
     record_uuid: str
     field_name: str
     excerpt: str
@@ -101,12 +102,26 @@ candidate's total career experience.
 
 EVIDENCE
 For positive matches and confirmed gaps, provide supporting references.
-Each reference must identify an existing role or story, an allowed field,
-and an exact contiguous excerpt from that field.
+Each reference must identify an existing role, story, or education record, 
+an allowed field, and an exact contiguous excerpt from that field.
 For responsibilities, copy an excerpt from one individual list item.
 Do not concatenate separate fields or list items into one excerpt.
 Do not cite identifier fields as evidence.
 Use the allowed evidence-field names supplied in the context.
+
+EDUCATION
+A qualification title alone does not establish that it was completed.
+Only status="completed" establishes completion of that education record.
+For a positive assessment relying on a completed degree, cite both the
+qualification field and the status field, plus field_of_study when relevant.
+
+Do not treat in_progress, not_completed, or unknown as an awarded degree.
+Study in progress or unfinished study alone does not establish a confirmed
+gap: the profile may contain another completed qualification or equivalent
+experience. Assess all documented alternatives before classifying.
+
+Do not infer degree equivalence, accreditation, or field of study from an
+institution name. A completion date alone does not override the status.
 
 INTERPRETATION
 Apply material thresholds before awarding any positive classification.
@@ -185,6 +200,9 @@ def create_profile_match_assessor(llm):
                     ),
                     "allowed_story_evidence_fields": sorted(
                         STORY_EVIDENCE_FIELDS
+                    ),
+                    "allowed_education_evidence_fields": sorted(
+                        EDUCATION_EVIDENCE_FIELDS
                     )
                 },
                 ensure_ascii=False

@@ -26,6 +26,14 @@ STORY_EVIDENCE_FIELDS = {
     "reflection"
 }
 
+EDUCATION_EVIDENCE_FIELDS = {
+    "qualification",
+    "institution",
+    "field_of_study",
+    "status",
+    "completion_date"
+}
+
 
 def _data_revision(data: dict) -> str:
     """Hash a consistent JSON representation of validated data."""
@@ -116,15 +124,22 @@ def validate_profile_match(
         story.story_uuid: story.model_dump(mode="json")
         for story in validated_profile.stories
     }
+    education = {
+        record.education_uuid: record.model_dump(mode="json")
+        for record in validated_profile.education
+    }
 
     for assessment in validated_match.assessments:
         for evidence in assessment.evidence:
             if evidence.record_type == "role":
                 record = roles.get(evidence.record_uuid)
                 allowed_fields = ROLE_EVIDENCE_FIELDS
-            else:
+            elif evidence.record_type == "story":
                 record = stories.get(evidence.record_uuid)
                 allowed_fields = STORY_EVIDENCE_FIELDS
+            else:
+                record = education.get(evidence.record_uuid)
+                allowed_fields = EDUCATION_EVIDENCE_FIELDS
 
             if record is None:
                 raise ValueError("Evidence references an unknown profile record.")
