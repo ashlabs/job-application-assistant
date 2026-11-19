@@ -22,6 +22,9 @@ class StoryTurn(BaseModel):
     employer: str | None
     job_title: str | None
     existing_role_uuid: str | None
+    start_date: str | None
+    end_date: str | None
+    is_current: bool | None
 
     title: str | None
     situation: str | None
@@ -66,10 +69,33 @@ story, return its existing_role_uuid exactly as supplied in the context.
 Never invent an identifier.
 Do not choose between ambiguous roles without asking the user.
 
+EMPLOYMENT DATES
+Collect the employment period for the role associated with this story.
+Return newly supplied dates or explicit corrections only.
+Use YYYY-MM when the user supplies a month and year, and YYYY when only
+a year is supplied. Never invent missing date components.
+Dates describe the employment role, not the duration of one project.
+
+Set is_current only when the user explicitly establishes whether they
+still hold the role. A statement that they currently hold it means true.
+A statement that the role ended means false.
+Use null for date or current-status fields with no new information.
+Null means preserve the existing value.
+
+For a date-only answer about the active story's linked role, employer,
+job_title, and existing_role_uuid may all be null.
+To update a different existing role, return its exact existing_role_uuid.
+Do not create a story merely to record employment dates.
+
+If the user explicitly corrects a previously ended role to a current role,
+return is_current=true and end_date=null; the application clears the old
+end date. Never return is_current=true together with an end date.
+
 If the active story is already linked and the user supplies no employment
-correction, return null for all three employment fields.
-For an employment correction, clarify any contradiction before returning
-replacement employment details.
+correction, return null for employer, job_title, and existing_role_uuid.
+After linking the story, ask for missing employment dates or current
+status, one question at a time, before continuing with missing STAR
+details. Respect skipped topics and accept unknown dates.
 
 QUESTIONS
 Ask one concise question at a time, based on missing or unclear details.
@@ -232,7 +258,10 @@ def create_interview_step(llm):
                     "employer",
                     "job_title",
                     "existing_role_uuid",
-                    "next_question"
+                    "next_question",
+                    "start_date",
+                    "end_date",
+                    "is_current"
                 }
             )
             updates = {
@@ -254,26 +283,72 @@ def create_interview_step(llm):
                 story_data = None
 
             profile_data = profile.model_dump(mode="json")
+            role_updates = {
+                name: getattr(turn, name)
+                for name in ("start_date", "end_date", "is_current")
+                if getattr(turn, name) is not None
+            }
+
+            role, clarification = _resolve_role(profile, turn)
+
+            # Date-only answers can refer to the active story's role.
+            if (
+                role is None
+                and clarification is None
+                and role_updates
+                and existing is not None
+                and existing.role_uuid is not None
+            ):
+                role = next(
+                    item
+                    for item in profile.roles
+                    if item.role_uuid == existing.role_uuid
+                )
+
+            if clarification is not None:
+                question = clarification
+            elif role_updates and role is None:
+                question = (
+                    "Which employer and job title do these "
+                    "employment dates belong to?"
+                )
+
+            if role is not None:
+                role_data = role.model_dump(mode="json")
+                role_data.update(role_updates)
+
+                if turn.is_current is True:
+                    if turn.end_date is not None:
+                        raise ValueError(
+                            "A current role cannot have an end date."
+                        )
+                    role_data["end_date"] = None
+
+                if (
+                    role_data["is_current"] is True
+                    and role_data["end_date"] is not None
+                ):
+                    raise ValueError(
+                        "Clarify whether the role is current or ended."
+                    )
+
+                role = EmploymentRecord.model_validate(role_data)
+
+                for index, item in enumerate(profile_data["roles"]):
+                    if item["role_uuid"] == str(role.role_uuid):
+                        profile_data["roles"][index] = (
+                            role.model_dump(mode="json")
+                        )
+                        break
+                else:
+                    profile_data["roles"].append(
+                        role.model_dump(mode="json")
+                    )
 
             if story_data is not None:
                 story_data.update(updates)
 
-                role, clarification = _resolve_role(profile, turn)
-
-                if clarification is not None:
-                    question = clarification
-
                 if role is not None:
-                    known_ids = {
-                        item["role_uuid"]
-                        for item in profile_data["roles"]
-                    }
-
-                    if str(role.role_uuid) not in known_ids:
-                        profile_data["roles"].append(
-                            role.model_dump(mode="json")
-                        )
-
                     story_data["role_uuid"] = str(role.role_uuid)
 
                 story = ExperienceStory.model_validate(story_data)
@@ -301,8 +376,9 @@ def create_interview_step(llm):
                         story.model_dump(mode="json")
                     )
 
-                profile = CareerProfile.model_validate(profile_data)
                 active_id = str(story.story_uuid)
+
+            profile = CareerProfile.model_validate(profile_data)
 
             return {
                 "draft_profile": profile.model_dump(mode="json"),

@@ -135,3 +135,96 @@ def test_unknown_role_reference_leaves_draft_unchanged():
     assert "draft_profile" not in result
     assert state["draft_profile"] == original
     assert state["active_story_uuid"] is None
+
+def test_date_only_answer_preserves_story_and_role_identity():
+    profile = make_saved_profile()
+    state = new_interview_state(profile_to_markdown(profile))
+    state["active_story_uuid"] = str(profile.stories[0].story_uuid)
+    state["messages"] = [
+        HumanMessage(
+            content="I held that role from March 2018 to July 2023."
+        )
+    ]
+    original = profile.model_dump(mode="json")
+
+    turn = make_turn(
+        start_date="2018-03",
+        end_date="2023-07",
+        is_current=False,
+    )
+    result = create_interview_step(FakeModel(turn))(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert len(updated.roles) == 1
+    assert updated.roles[0].role_uuid == profile.roles[0].role_uuid
+    assert updated.roles[0].start_date == "2018-03"
+    assert updated.roles[0].end_date == "2023-07"
+    assert updated.roles[0].is_current is False
+    assert updated.stories == profile.stories
+    assert state["draft_profile"] == original
+
+
+def test_role_dates_can_update_without_creating_story():
+    profile = make_saved_profile()
+    state = new_interview_state(profile_to_markdown(profile))
+    state["messages"] = [
+        HumanMessage(
+            content="That Product Manager role started in 2018. "
+            "I still hold it."
+        )
+    ]
+
+    turn = make_turn(
+        existing_role_uuid=str(profile.roles[0].role_uuid),
+        start_date="2018",
+        is_current=True,
+    )
+    result = create_interview_step(FakeModel(turn))(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert updated.roles[0].start_date == "2018"
+    assert updated.roles[0].end_date is None
+    assert updated.roles[0].is_current is True
+    assert updated.stories == profile.stories
+    assert result["active_story_uuid"] is None
+
+
+def test_current_role_correction_clears_previous_end_date():
+    profile = make_saved_profile()
+    profile.roles[0].start_date = "2018"
+    profile.roles[0].end_date = "2023"
+    profile.roles[0].is_current = False
+    state = new_interview_state(profile_to_markdown(profile))
+    state["active_story_uuid"] = str(profile.stories[0].story_uuid)
+    state["messages"] = [
+        HumanMessage(
+            content="Correction: I still hold that role."
+        )
+    ]
+
+    result = create_interview_step(
+        FakeModel(make_turn(is_current=True))
+    )(state)
+    updated = CareerProfile.model_validate(result["draft_profile"])
+
+    assert updated.roles[0].start_date == "2018"
+    assert updated.roles[0].end_date is None
+    assert updated.roles[0].is_current is True
+    assert updated.stories == profile.stories
+
+
+def test_contradictory_current_role_dates_leave_draft_unchanged():
+    profile = make_saved_profile()
+    state = new_interview_state(profile_to_markdown(profile))
+    state["active_story_uuid"] = str(profile.stories[0].story_uuid)
+    original = profile.model_dump(mode="json")
+
+    turn = make_turn(
+        is_current=True,
+        end_date="2023"
+    )
+    result = create_interview_step(FakeModel(turn))(state)
+
+    assert result["status"] == "error"
+    assert "draft_profile" not in result
+    assert state["draft_profile"] == original
