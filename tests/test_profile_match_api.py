@@ -348,7 +348,8 @@ def test_summary_reports_unassessed_job_without_model_call(match_api):
             "capture_uuid": str(capture.capture_uuid),
             "status": "not_assessed",
             "percentage": None,
-            "missing_evidence_count": None
+            "missing_evidence_count": None,
+            "required_gap_count": None
         }
     ]
     assert calls == []
@@ -376,7 +377,8 @@ def test_summary_includes_saved_zero_percentage(match_api):
             "capture_uuid": str(capture.capture_uuid),
             "status": "assessed",
             "percentage": 0.0,
-            "missing_evidence_count": 1
+            "missing_evidence_count": 1,
+            "required_gap_count": 0
         }
     ]
     assert len(calls) == 1
@@ -433,7 +435,8 @@ def test_summary_distinguishes_missing_profile(match_api):
             "capture_uuid": str(capture.capture_uuid),
             "status": "profile_unavailable",
             "percentage": None,
-            "missing_evidence_count": None
+            "missing_evidence_count": None,
+            "required_gap_count": None
         }
     ]
     assert calls == []
@@ -465,3 +468,91 @@ def test_summary_requires_token(match_api, token):
     assert response.status_code == 401
     assert calls == []
 
+@pytest.mark.parametrize(
+    ("importance", "expected_count"),
+    [("required", 1), ("preferred", 0)]
+)
+def test_summary_counts_only_required_gaps(
+    tmp_path, importance, expected_count
+):
+    from job_application_assistant.models import EducationRecord
+    from job_application_assistant.profile_match import ProfileEvidence
+
+    database = tmp_path / "captures.sqlite"
+    profile_path = tmp_path / "career_profile.md"
+    education = EducationRecord(
+        qualification="Doctor of Philosophy",
+        status="not_completed"
+    )
+    profile = CareerProfile(education=[education])
+    profile_path.write_text(
+        profile_to_markdown(profile), encoding="utf-8"
+    )
+
+    capture = JobCapture(
+        source_url="https://example.com/jobs/test",
+        captured_at="2026-11-19T10:00:00-08:00",
+        capture_method="paste",
+        jd_text="Doctor of Philosophy."
+    )
+    save_capture(database, capture)
+    requirement = JobRequirement(
+        description=capture.jd_text,
+        kind="qualification",
+        importance=importance,
+        source_excerpt=capture.jd_text
+    )
+    save_requirements(
+        database,
+        JobRequirements(
+            capture_uuid=capture.capture_uuid,
+            jd_text_sha256=jd_text_revision(capture.jd_text),
+            requirements=[requirement]
+        )
+    )
+    calls = []
+
+    def assessor(saved_profile, source):
+        calls.append(True)
+        return ProfileMatch(
+            capture_uuid=source.capture_uuid,
+            profile_sha256=profile_revision(saved_profile),
+            requirements_sha256=requirements_revision(source),
+            assessments=[
+                QualificationAssessment(
+                    requirement_uuid=requirement.requirement_uuid,
+                    classification="confirmed_gap",
+                    explanation="The user confirmed the PhD was not completed.",
+                    evidence=[
+                        ProfileEvidence(
+                            record_type="education",
+                            record_uuid=education.education_uuid,
+                            field_name="status",
+                            excerpt="not_completed"
+                        )
+                    ]
+                )
+            ]
+        )
+
+    app = create_app(
+        database_path=database,
+        api_token=HEADERS["X-Capture-Token"],
+        profile_path=profile_path,
+        profile_assessor=assessor
+    )
+    with TestClient(app) as client:
+        saved = client.post(
+            f"/captures/{capture.capture_uuid}/profile-match",
+            headers=HEADERS
+        )
+        assert saved.status_code == 200
+        response = client.get(
+            "/capture-match-summaries", headers=HEADERS
+        )
+
+    assert response.status_code == 200
+    summary = response.json()[0]
+    assert summary["required_gap_count"] == expected_count
+    assert summary["missing_evidence_count"] == 0
+    assert len(calls) == 1

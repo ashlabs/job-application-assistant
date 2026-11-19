@@ -380,6 +380,16 @@ async function loadListMatchSummaries() {
             + `${missingCount === 1 ? "s" : ""} clarification`
           );
         }
+        const requiredGapCount = summary.required_gap_count;
+        if (
+          Number.isInteger(requiredGapCount)
+          && requiredGapCount >= 0
+        ) {
+          label.textContent += (
+            ` · ${requiredGapCount} confirmed required gap`
+            + `${requiredGapCount === 1 ? "" : "s"}`
+          );
+        }
       }
     }
   } catch {
