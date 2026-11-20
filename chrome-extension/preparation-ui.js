@@ -33,6 +33,7 @@
   }
 
   function clearGuide() {
+    document.dispatchEvent(new CustomEvent("preparation-guide-cleared"));
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     downloadUrl = null;
     ui.guide.replaceChildren();
@@ -142,6 +143,9 @@
     const link = add(ui.guide, "a", "Download interview guide");
     link.href = downloadUrl;
     link.download = "interview-guide.md";
+    document.dispatchEvent(new CustomEvent("preparation-guide-ready", {
+      detail: { captureUuid, guideUuid: value.guide_uuid }
+    }));
   }
 
   async function request(path, body, timeoutMs = 75000) {

@@ -10,6 +10,7 @@ from dotenv import dotenv_values
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from job_application_assistant.coaching_api import create_coaching_router
 from job_application_assistant.resume_api import create_resume_router
 from job_application_assistant.preparation_api import create_preparation_router
 from job_application_assistant.job_capture import JobCapture
@@ -220,6 +221,14 @@ def create_app(
 
     app.include_router(
         create_preparation_router(
+            database=database,
+            profile_path=configured_profile,
+            require_token=require_token
+        )
+    )
+
+    app.include_router(
+        create_coaching_router(
             database=database,
             profile_path=configured_profile,
             require_token=require_token

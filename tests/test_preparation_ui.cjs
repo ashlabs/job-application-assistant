@@ -27,12 +27,14 @@ function harness(fetcher) {
     },
     chrome: { storage: { local: { get: async () => ({ captureToken: "token" }) } } },
     fetch: fetcher,
+    CustomEvent: class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } },
     document: {
       getElementById(id) {
         if (!elements.has(id)) elements.set(id, element());
         return elements.get(id);
       },
       createElement: element,
+      dispatchEvent(event) { return handlers[event.type]?.(event); },
       addEventListener(name, callback) { handlers[name] = callback; }
     },
     window: { addEventListener() {} }

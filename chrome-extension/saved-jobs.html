@@ -176,6 +176,7 @@
             <textarea id="preparation-urls" rows="3"
               style="display:block;width:100%;box-sizing:border-box"
               placeholder="https://about.google/"></textarea>
+            <p>Type or paste at least one URL; the grey text is an example.</p>
             <label style="display:block">
               <input id="preparation-official" type="checkbox">
               I verified that these URLs are official company sources.
@@ -202,6 +203,47 @@
             <p id="preparation-guide-status" role="status" aria-live="polite"></p>
             <div id="preparation-guide"></div>
           </section>
+          <section aria-labelledby="coaching-heading">
+            <h4 id="coaching-heading">Interview practice</h4>
+            <p>Use your generated guide for five practice questions with
+              feedback and up to one follow-up per question. Review the
+              guide's questions before starting.</p>
+            <button id="coaching-start" type="button" disabled>Start new practice session</button>
+            <label for="coaching-sessions" style="display:block">Saved practice sessions</label>
+            <select id="coaching-sessions" disabled></select>
+            <button id="coaching-reload" type="button" disabled>Reload session</button>
+            <p id="coaching-status" role="status" aria-live="polite"></p>
+            <div id="coaching-workspace" hidden>
+              <p id="coaching-context"></p>
+              <p id="coaching-progress"></p>
+              <p id="coaching-question"></p>
+              <p id="coaching-followup"></p>
+              <p id="coaching-budget"></p>
+              <p id="coaching-error" role="alert"></p>
+              <label for="coaching-answer">Your practice answer</label>
+              <textarea id="coaching-answer" rows="5" maxlength="12000"
+                style="display:block;width:100%;box-sizing:border-box"></textarea>
+              <p>Sending an answer shares it, the question, and the guide's
+                approved-profile snapshot with your configured AI provider.
+                Usage charges may apply. Practice claims never update the
+                approved career profile.</p>
+              <button id="coaching-submit" type="button" disabled>Submit answer for feedback</button>
+              <button id="coaching-retry" type="button" disabled>Retry main question</button>
+              <button id="coaching-next" type="button" disabled>Next question</button>
+              <button id="coaching-skip" type="button" disabled>Skip question</button>
+              <button id="coaching-pause" type="button" disabled>Pause</button>
+              <button id="coaching-resume" type="button" disabled>Resume</button>
+              <div id="coaching-feedback"></div>
+              <details>
+                <summary>Saved answers and feedback</summary>
+                <div id="coaching-history"></div>
+              </details>
+              <div id="coaching-download"></div>
+              <p>Ratings are practice feedback, not hiring predictions.
+                A maximum of four evaluation requests per question includes
+                retries and failures.</p>
+            </div>
+          </section>
           <h4>Job description</h4>
           <div id="job-text"></div>
         </article>
@@ -212,5 +254,6 @@
   <script src="saved-jobs.js" defer></script>
   <script src="resume-ui.js" defer></script>
   <script src="preparation-ui.js" defer></script>
+  <script src="coaching-ui.js" defer></script>
 </body>
 </html>

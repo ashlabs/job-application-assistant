@@ -4,6 +4,7 @@ import ipaddress
 import json
 import os
 import socket
+import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -27,6 +28,8 @@ from job_application_assistant.interview_guide import (
     validate_sources,
 )
 from job_application_assistant.job_requirements_storage import load_requirements
+from job_application_assistant.models import CareerProfile
+from job_application_assistant.job_requirements import JobRequirements
 from job_application_assistant.profile_match_service import load_saved_profile
 from job_application_assistant.profile_match_validation import (
     profile_revision, requirements_revision,
@@ -103,6 +106,49 @@ def public_source(url, hosts):
     return fetch_source(url, hosts)
 
 
+def load_current_guide_manifest(
+    database, profile_path, preparation_root, capture_uuid, guide_uuid,
+):
+    """Validate one saved guide against current sources and approved facts."""
+    root = Path(preparation_root) / str(capture_uuid)
+    path = root / "guides" / str(guide_uuid) / "guide.json"
+    manifest = json.loads(path.read_bytes())
+    requirements = load_requirements(database, capture_uuid)
+    profile = load_saved_profile(profile_path)
+    candidates = list((root / "research").glob("*/sources.json"))
+    research_path = max(
+        candidates, key=lambda item: item.stat().st_mtime_ns
+    ) if candidates else None
+    research_raw = research_path.read_bytes() if research_path else b""
+    bundle = json.loads(research_raw) if research_raw else None
+    if (
+        requirements is None
+        or manifest["status"] != "draft_requires_review"
+        or manifest["capture_uuid"] != str(capture_uuid)
+        or manifest["profile_sha256"] != profile_revision(profile)
+        or manifest["requirements_sha256"] != requirements_revision(requirements)
+        or research_path is None
+        or manifest["research_uuid"] != research_path.parent.name
+        or manifest["research_sha256"] != sha256(research_raw).hexdigest()
+        or manifest["sources_snapshot"] != bundle
+        or manifest["profile_sha256"] != profile_revision(
+            CareerProfile.model_validate(manifest["profile_snapshot"])
+        )
+        or manifest["requirements_sha256"] != requirements_revision(
+            JobRequirements.model_validate(manifest["requirements_snapshot"])
+        )
+    ):
+        raise ValueError(
+            "This guide needs refresh: the profile, job, or research "
+            "changed. Review current sources and generate a new guide."
+        )
+    validate_guide(
+        InterviewGuide.model_validate(manifest["guide"]),
+        profile, requirements, bundle,
+    )
+    return manifest
+
+
 def create_preparation_router(
     database, profile_path, require_token, preparation_root=None,
     fetcher=None, guide_generator=None,
@@ -161,27 +207,11 @@ def create_preparation_router(
             ) from error
 
     def guide_report(capture_uuid, guide_uuid):
-        path = job_root(capture_uuid) / "guides" / str(guide_uuid) / "guide.json"
-        manifest = json.loads(path.read_bytes())
-        requirements = requirements_for(capture_uuid)
-        profile = load_saved_profile(profile_path)
-        research = current_research(capture_uuid)
-        if (
-            manifest["capture_uuid"] != str(capture_uuid)
-            or manifest["profile_sha256"] != profile_revision(profile)
-            or manifest["requirements_sha256"] != requirements_revision(requirements)
-            or research is None
-            or manifest["research_uuid"] != research["research_uuid"]
-            or manifest["research_sha256"] != research["research_sha256"]
-        ):
-            raise ValueError(
-                "This guide needs refresh: the profile, job, or research "
-                "changed. Review current sources and generate a new guide."
-            )
-        guide = validate_guide(
-            InterviewGuide.model_validate(manifest["guide"]),
-            profile, requirements, research["bundle"],
+        manifest = load_current_guide_manifest(
+            database, profile_path, root, capture_uuid, guide_uuid
         )
+        guide = InterviewGuide.model_validate(manifest["guide"])
+        research = {"bundle": manifest["sources_snapshot"]}
         recruiter_guidance = manifest.get("recruiter_guidance", "")
         text = render_guide(guide, research["bundle"], recruiter_guidance)
         return {
