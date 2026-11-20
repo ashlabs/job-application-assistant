@@ -1,6 +1,7 @@
 """Calculate documented alignment using fixed qualification weights."""
 
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -12,18 +13,25 @@ from job_application_assistant.profile_match_validation import (
 )
 
 
-IMPORTANCE_WEIGHTS = {
-    "required": 2,
-    "preferred": 1
-}
+from job_application_assistant.scoring_rules import (
+    SCORING_RULES_VERSION, IMPORTANCE_WEIGHTS, CLASSIFICATION_HALF_CREDITS,
+)
 
-# Integer half-credits avoid floating-point arithmetic during accumulation.
-CLASSIFICATION_HALF_CREDITS = {
-    "strong_match": 2,
-    "transferable_experience": 1,
-    "evidence_missing": 0,
-    "confirmed_gap": 0
-}
+
+class QualificationCredit(BaseModel):
+    """Python-calculated contribution for one qualification, in JD order."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    requirement_uuid: UUID
+    importance: Literal["required", "preferred", "unspecified"]
+    classification: Literal[
+        "strong_match", "transferable_experience", "evidence_missing", "confirmed_gap"
+    ]
+    weight: int | None
+    classification_credit: float
+    earned_weighted_credit: float
+    possible_weighted_credit: int
+    exclusion_reason: Literal["unspecified_importance"] | None
 
 
 class DocumentedMatchScore(BaseModel):
@@ -31,6 +39,8 @@ class DocumentedMatchScore(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    scoring_rules_version: str
+    contributions: list[QualificationCredit]
     percentage: float | None
     earned_weighted_credit: float
     possible_weighted_credit: int
@@ -57,23 +67,31 @@ def score_profile_match(
     scored_count = 0
     unspecified = []
     constraints = []
+    contributions = []
 
     for requirement in requirements.requirements:
         if requirement.kind == "constraint":
             constraints.append(requirement.requirement_uuid)
             continue
 
-        if requirement.importance == "unspecified":
+        assessment = assessments[requirement.requirement_uuid]
+        half_credit = CLASSIFICATION_HALF_CREDITS[assessment.classification]
+        weight = IMPORTANCE_WEIGHTS.get(requirement.importance)
+        contributions.append(QualificationCredit(
+            requirement_uuid=requirement.requirement_uuid,
+            importance=requirement.importance,
+            classification=assessment.classification,
+            weight=weight,
+            classification_credit=half_credit / 2,
+            earned_weighted_credit=(weight or 0) * half_credit / 2,
+            possible_weighted_credit=weight or 0,
+            exclusion_reason=("unspecified_importance" if weight is None else None),
+        ))
+        if weight is None:
             unspecified.append(requirement.requirement_uuid)
             continue
 
-        weight = IMPORTANCE_WEIGHTS[requirement.importance]
-        assessment = assessments[requirement.requirement_uuid]
-
-        earned_half_credits += (
-            weight
-            * CLASSIFICATION_HALF_CREDITS[assessment.classification]
-        )
+        earned_half_credits += weight * half_credit
         possible_credit += weight
         scored_count += 1
 
@@ -87,6 +105,8 @@ def score_profile_match(
     )
 
     return DocumentedMatchScore(
+        scoring_rules_version=SCORING_RULES_VERSION,
+        contributions=contributions,
         percentage=percentage,
         earned_weighted_credit=earned_half_credits / 2,
         possible_weighted_credit=possible_credit,

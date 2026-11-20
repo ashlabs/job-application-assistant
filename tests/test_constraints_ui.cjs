@@ -35,11 +35,20 @@ function harness() {
   return {
     display(constraints) {
       context.report = {
-        match: { capture_uuid: "job", assessments: [{ requirement_uuid: "q", classification: "evidence_missing", explanation: "Unknown", evidence: [] }], constraints },
-        score: { percentage: 0, earned_weighted_credit: 0, possible_weighted_credit: 2,
+        match: { capture_uuid: "job", scoring_rules_version: "documented-alignment-v1", assessments: [{ requirement_uuid: "q", classification: "evidence_missing", explanation: "Unknown", evidence: [] }], constraints },
+        score: { scoring_rules_version: "documented-alignment-v1", contributions: [{
+          requirement_uuid: "q", importance: "required", classification: "evidence_missing",
+          weight: 2, classification_credit: 0, earned_weighted_credit: 0,
+          possible_weighted_credit: 2, exclusion_reason: null
+        }], percentage: 0, earned_weighted_credit: 0, possible_weighted_credit: 2,
           scored_qualification_count: 1, unspecified_qualification_uuids: [], constraint_uuids: ["c"] }
       };
       vm.runInContext('displayMatch(report, "job")', context);
+    },
+    displayReport(report, requirements) {
+      context.report = report;
+      context.requirements = requirements;
+      vm.runInContext('currentRequirements = { requirements }; displayMatch(report, "job")', context);
     },
     text: id => text(elements.get(id)),
     clear: () => vm.runInContext("clearMatch()", context)
@@ -71,3 +80,50 @@ test("missing coverage and unsupported blocker are rejected", () => {
   assert.throws(() => ui.display([]), /cover every/);
   assert.throws(() => ui.display([{requirement_uuid: "c", classification: "blocking", explanation: "Unsupported", evidence: []}]), /invalid practical constraint/);
 });
+
+function scoringCase() {
+  const requirements = [
+    {requirement_uuid: "q1", description: "Architecture", kind: "qualification", importance: "required"},
+    {requirement_uuid: "q2", description: "Python", kind: "qualification", importance: "preferred"},
+    {requirement_uuid: "q3", description: "Communication", kind: "qualification", importance: "unspecified"}
+  ];
+  const classifications = ["transferable_experience", "strong_match", "strong_match"];
+  const report = {
+    match: {capture_uuid: "job", scoring_rules_version: "documented-alignment-v1", constraints: [],
+      assessments: requirements.map((r, i) => ({requirement_uuid: r.requirement_uuid, classification: classifications[i], explanation: "Documented evidence.", evidence: []}))},
+    score: {scoring_rules_version: "documented-alignment-v1", percentage: 66.7,
+      earned_weighted_credit: 2, possible_weighted_credit: 3, scored_qualification_count: 2,
+      unspecified_qualification_uuids: ["q3"], constraint_uuids: [],
+      contributions: requirements.map((r, i) => ({requirement_uuid: r.requirement_uuid,
+        importance: r.importance, classification: classifications[i],
+        weight: [2, 1, null][i], classification_credit: [.5, 1, 1][i],
+        earned_weighted_credit: [1, 1, 0][i], possible_weighted_credit: [2, 1, 0][i],
+        exclusion_reason: i === 2 ? "unspecified_importance" : null}))}
+  };
+  return {report, requirements};
+}
+
+test("each qualification shows earned credit, exclusions, and the current rule version", () => {
+  const ui = harness();
+  const {report, requirements} = scoringCase();
+  ui.displayReport(report, requirements);
+  assert.match(ui.text("assessment-list"), /weight 2 × classification credit 0.5 = 1 of 2 weighted credits/);
+  assert.match(ui.text("assessment-list"), /weight 1 × classification credit 1 = 1 of 1 weighted credits/);
+  assert.match(ui.text("assessment-list"), /excluded — importance is unspecified/);
+  assert.match(ui.text("match-rules-version"), /documented-alignment-v1/);
+  assert.match(ui.text("match-calculation"), /2 of 3 weighted credits across 2 scored qualifications/);
+  ui.clear();
+  assert.equal(ui.text("match-rules-version"), "");
+});
+
+for (const problem of ["missing", "duplicate", "version", "classification"]) {
+  test(`inconsistent scoring detail is rejected: ${problem}`, () => {
+    const ui = harness();
+    const {report, requirements} = scoringCase();
+    if (problem === "missing") report.score.contributions.pop();
+    else if (problem === "duplicate") report.score.contributions.push(report.score.contributions[0]);
+    else if (problem === "version") report.match.scoring_rules_version = "outdated";
+    else report.score.contributions[0].classification = "confirmed_gap";
+    assert.throws(() => ui.displayReport(report, requirements), /Scoring details|scoring details|credit details|disagree/);
+  });
+}

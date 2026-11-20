@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from job_application_assistant.models import NonEmptyText
+from job_application_assistant.scoring_rules import SCORING_RULES_VERSION
 
 
 class ProfileEvidence(BaseModel):
@@ -83,3 +84,4 @@ class ProfileMatch(BaseModel):
     profile_sha256: NonEmptyText
     assessments: list[QualificationAssessment] = Field(default_factory=list)
     constraints: list[ConstraintAssessment] | None = None
+    scoring_rules_version: NonEmptyText = SCORING_RULES_VERSION

@@ -556,3 +556,45 @@ def test_summary_counts_only_required_gaps(
     assert summary["required_gap_count"] == expected_count
     assert summary["missing_evidence_count"] == 0
     assert len(calls) == 1
+
+def test_api_exposes_versioned_credit_breakdown(match_api):
+    from job_application_assistant.scoring_rules import SCORING_RULES_VERSION
+    client, _, _, capture, calls, _ = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+    response = client.post(path, headers=HEADERS)
+    assert response.status_code == 200
+    value = response.json()
+    assert value["match"]["scoring_rules_version"] == value["score"]["scoring_rules_version"] == SCORING_RULES_VERSION
+    credit = value["score"]["contributions"][0]
+    assert credit["requirement_uuid"] == value["match"]["assessments"][0]["requirement_uuid"]
+    assert credit["weight"] == credit["possible_weighted_credit"] == 2
+    assert credit["classification_credit"] == credit["earned_weighted_credit"] == 0
+    assert credit["exclusion_reason"] is None
+    assert client.get(path, headers=HEADERS).json() == value
+    assert len(calls) == 1
+
+
+def test_legacy_report_requires_explicit_reassessment_and_preserves_original(match_api):
+    from test_scoring_version_storage import legacy_database
+    from job_application_assistant.profile_match import ProfileMatch
+    from job_application_assistant.scoring_rules import SCORING_RULES_VERSION
+    client, database, _, capture, calls, _ = match_api
+    path = f"/captures/{capture.capture_uuid}/profile-match"
+    value = client.post(path, headers=HEADERS).json()
+    with sqlite3.connect(database) as connection:
+        connection.execute("DROP TABLE profile_matches")
+    payload = legacy_database(database, ProfileMatch.model_validate(value["match"]))
+    assert client.get(path, headers=HEADERS).json() is None
+    summary = client.get("/capture-match-summaries", headers=HEADERS).json()[0]
+    assert summary["status"] == "not_assessed"
+    assert summary["percentage"] is None
+    assert len(calls) == 1
+    refreshed = client.post(path, headers=HEADERS)
+    assert refreshed.status_code == 200
+    assert refreshed.json()["match"]["scoring_rules_version"] == SCORING_RULES_VERSION
+    assert len(calls) == 2
+    client.post(path, headers=HEADERS)
+    assert len(calls) == 2
+    with sqlite3.connect(database) as connection:
+        retained = connection.execute("SELECT payload FROM profile_matches WHERE scoring_rules_version='unversioned'").fetchone()[0]
+    assert retained == payload

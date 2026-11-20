@@ -24,6 +24,7 @@ const ui = {
   matchResult: document.getElementById("match-result"),
   percentage: document.getElementById("match-percentage"),
   calculation: document.getElementById("match-calculation"),
+  rulesVersion: document.getElementById("match-rules-version"),
   exclusions: document.getElementById("match-exclusions"),
   assessments: document.getElementById("assessment-list"),
   constraintAssessments: document.getElementById("constraint-assessment-list"),
@@ -109,6 +110,7 @@ function clearMatch() {
   ui.matchResult.hidden = true;
   ui.percentage.textContent = "";
   ui.calculation.textContent = "";
+  ui.rulesVersion.textContent = "";
   ui.exclusions.textContent = "";
   ui.assessments.replaceChildren();
   ui.constraintAssessments.replaceChildren();
@@ -279,7 +281,7 @@ async function loadSavedMatch(captureUuid) {
     if (selectedCaptureUuid !== captureUuid || currentRequirements !== openedRequirements) return;
     if (report === null) {
       ui.matchStatus.textContent = (
-        "No saved match for the current profile and requirements. "
+        "No saved match for the current profile, requirements, and scoring rules. "
         + "Click Assess profile match to create one."
       );
       return;
@@ -632,6 +634,39 @@ function displayMatch(report, captureUuid) {
     throw new Error("The API returned an unexpected match report.");
   }
 
+  if (!Array.isArray(score.contributions)
+      || typeof score.scoring_rules_version !== "string"
+      || !score.scoring_rules_version.trim()
+      || match.scoring_rules_version !== score.scoring_rules_version) {
+    throw new Error("Scoring details are missing or outdated. Restart the API and reassess.");
+  }
+  const contributions = new Map();
+  for (const credit of score.contributions) {
+    const requirement = currentRequirements.requirements.find(
+      item => item.requirement_uuid === credit.requirement_uuid
+    );
+    if (!requirement || requirement.kind !== "qualification"
+        || contributions.has(credit.requirement_uuid)
+        || credit.importance !== requirement.importance
+        || !Number.isFinite(credit.classification_credit)
+        || credit.classification_credit < 0 || credit.classification_credit > 1
+        || !Number.isFinite(credit.earned_weighted_credit)
+        || credit.earned_weighted_credit < 0
+        || !Number.isFinite(credit.possible_weighted_credit)
+        || credit.possible_weighted_credit < credit.earned_weighted_credit
+        || (requirement.importance === "unspecified"
+          ? credit.weight !== null || credit.exclusion_reason !== "unspecified_importance"
+          : !Number.isInteger(credit.weight) || credit.weight <= 0 || credit.exclusion_reason !== null)) {
+      throw new Error("The API returned invalid qualification credit details.");
+    }
+    contributions.set(credit.requirement_uuid, credit);
+  }
+  if (contributions.size !== currentRequirements.requirements.filter(
+    item => item.kind === "qualification"
+  ).length) {
+    throw new Error("Scoring details do not cover every qualification.");
+  }
+
   const percentage = score.percentage;
   if (
     percentage !== null
@@ -667,7 +702,19 @@ function displayMatch(report, captureUuid) {
       throw new Error("The report contains an unexpected assessment.");
     }
 
-    fragment.append(renderAssessment(assessment, requirement));
+    const credit = contributions.get(assessment.requirement_uuid);
+    if (!credit || credit.classification !== assessment.classification) {
+      throw new Error("The assessment and its credit details disagree.");
+    }
+    const item = renderAssessment(assessment, requirement);
+    const calculation = document.createElement("p");
+    calculation.textContent = credit.exclusion_reason
+      ? "Scoring: excluded — importance is unspecified; review this requirement."
+      : `Scoring: weight ${credit.weight} × classification credit `
+        + `${credit.classification_credit} = ${credit.earned_weighted_credit} `
+        + `of ${credit.possible_weighted_credit} weighted credits.`;
+    item.append(calculation);
+    fragment.append(item);
   }
 
   if (match.assessments.length === 0) {
@@ -721,6 +768,7 @@ function displayMatch(report, captureUuid) {
       ? "Documented match: Not available"
       : `Documented match: ${percentage.toFixed(1)}%`
   );
+  ui.rulesVersion.textContent = `Scoring rules: ${score.scoring_rules_version}`;
   ui.calculation.textContent = (
     `${score.earned_weighted_credit} of `
     + `${score.possible_weighted_credit} weighted credits across `

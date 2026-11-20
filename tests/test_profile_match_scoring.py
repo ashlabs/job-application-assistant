@@ -173,3 +173,48 @@ def test_stale_assessment_cannot_be_scored():
 
     with pytest.raises(ValueError, match="profile changed"):
         score_profile_match(profile, requirements, match)
+
+def test_per_qualification_credits_reconcile_and_preserve_jd_order():
+    from job_application_assistant.scoring_rules import SCORING_RULES_VERSION
+    specifications = [
+        ("qualification", importance, classification)
+        for importance in ("required", "preferred", "unspecified")
+        for classification in (
+            "strong_match", "transferable_experience", "evidence_missing", "confirmed_gap"
+        )
+    ] + [("constraint", "required", None)]
+    profile, requirements, match = make_inputs(specifications)
+    score = score_profile_match(profile, requirements, match)
+    assert score.scoring_rules_version == match.scoring_rules_version == SCORING_RULES_VERSION
+    assert [item.requirement_uuid for item in score.contributions] == [
+        item.requirement_uuid for item in requirements.requirements if item.kind == "qualification"
+    ]
+    assert [item.classification_credit for item in score.contributions[:4]] == [1, .5, 0, 0]
+    assert [item.earned_weighted_credit for item in score.contributions[:4]] == [2, 1, 0, 0]
+    assert [item.earned_weighted_credit for item in score.contributions[4:8]] == [1, .5, 0, 0]
+    assert all(item.weight is None and item.exclusion_reason == "unspecified_importance"
+               and item.earned_weighted_credit == item.possible_weighted_credit == 0
+               for item in score.contributions[8:])
+    assert sum(item.earned_weighted_credit for item in score.contributions) == score.earned_weighted_credit == 4.5
+    assert sum(item.possible_weighted_credit for item in score.contributions) == score.possible_weighted_credit == 12
+    assert score.percentage == 37.5
+
+
+def test_percentage_rounds_once_after_exact_half_credit_accumulation():
+    inputs = make_inputs([
+        ("qualification", "required", "strong_match"),
+        ("qualification", "required", "transferable_experience"),
+        ("qualification", "required", "evidence_missing"),
+        ("qualification", "preferred", "evidence_missing"),
+    ])
+    score = score_profile_match(*inputs)
+    assert score.earned_weighted_credit == 3
+    assert score.possible_weighted_credit == 7
+    assert score.percentage == 42.9
+
+
+def test_an_assessment_from_another_policy_cannot_be_scored():
+    profile, requirements, match = make_inputs([("qualification", "required", "strong_match")])
+    match.scoring_rules_version = "documented-alignment-v0"
+    with pytest.raises(ValueError, match="Scoring rules changed"):
+        score_profile_match(profile, requirements, match)

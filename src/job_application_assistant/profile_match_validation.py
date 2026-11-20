@@ -6,6 +6,7 @@ from hashlib import sha256
 from job_application_assistant.job_requirements import JobRequirements
 from job_application_assistant.models import CareerProfile
 from job_application_assistant.profile_match import ProfileMatch
+from job_application_assistant.scoring_rules import SCORING_RULES_VERSION
 
 
 FACT_EVIDENCE_FIELDS = {"name", "statement"}
@@ -80,6 +81,9 @@ def validate_profile_match(
     validated_match = ProfileMatch.model_validate(
         match.model_dump(mode="json")
     )
+
+    if validated_match.scoring_rules_version != SCORING_RULES_VERSION:
+        raise ValueError("Scoring rules changed. Assess the profile again.")
 
     if validated_match.capture_uuid != validated_requirements.capture_uuid:
         raise ValueError("The assessment references a different capture.")
