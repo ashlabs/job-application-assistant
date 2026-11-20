@@ -188,3 +188,27 @@ a {
     margin-bottom: 10px;
   }
 }
+#requirements-editor fieldset {
+  min-width: 0;
+  margin: 16px 0;
+  border: 1px solid #ccd5e2;
+}
+
+#requirements-editor label {
+  display: block;
+  margin: 10px 0;
+}
+
+#requirements-editor textarea,
+#requirements-editor input[type="text"],
+#requirements-editor select {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+}
+
+#requirements-editor textarea {
+  min-height: 80px;
+  resize: vertical;
+}

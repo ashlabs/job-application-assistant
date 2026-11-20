@@ -7,6 +7,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAIError
+from pydantic import BaseModel, ConfigDict, Field
+
+from job_application_assistant.requirements_review import (
+    RequirementsReviewConflict, review_snapshot, save_requirements_review,
+)
 
 from job_application_assistant.job_capture import JobCapture
 from job_application_assistant.job_capture_storage import load_capture
@@ -24,6 +29,15 @@ from job_application_assistant.job_requirements_storage import (
 from job_application_assistant.job_requirements_validation import (
     validate_requirements
 )
+
+
+class RequirementsCorrection(BaseModel):
+    """An explicit save of the exact edited requirements."""
+
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    requirements: JobRequirements
+    confirmed: bool
 
 
 RequirementsExtractor = Callable[[JobCapture], JobRequirements]
@@ -151,5 +165,36 @@ def create_requirements_router(
                 status_code=500,
                 detail="The extraction could not be stored safely."
             ) from error
+
+    @router.get("/captures/{capture_uuid}/requirements/review")
+    def get_review(capture_uuid: UUID):
+        try:
+            return review_snapshot(database, capture_uuid)
+        except KeyError as error:
+            raise HTTPException(404, "Capture not found.") from error
+        except RequirementsReviewConflict as error:
+            raise HTTPException(409, str(error)) from error
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(503, "Requirements storage is unavailable.") from error
+        except ValueError as error:
+            raise HTTPException(422, "Stored requirements could not be validated.") from error
+
+    @router.put("/captures/{capture_uuid}/requirements/review")
+    def put_review(capture_uuid: UUID, correction: RequirementsCorrection):
+        if not correction.confirmed:
+            raise HTTPException(422, "Confirm review of these exact requirements before saving.")
+        try:
+            return save_requirements_review(
+                database, capture_uuid, correction.expected_revision,
+                correction.requirements,
+            )
+        except KeyError as error:
+            raise HTTPException(404, "Capture not found.") from error
+        except RequirementsReviewConflict as error:
+            raise HTTPException(409, str(error)) from error
+        except (sqlite3.Error, OSError) as error:
+            raise HTTPException(503, "Requirements storage is unavailable.") from error
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
 
     return router

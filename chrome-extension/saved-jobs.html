@@ -84,9 +84,26 @@
 
             <div id="requirements-result" hidden>
               <p>
-                AI-extracted requirements. Review the classifications
-                and supporting excerpts against the original JD.
+                Review the saved requirements, classifications, and supporting
+                excerpts against the original JD. You can correct the extraction below.
               </p>
+
+              <button id="requirements-edit" type="button">Review or correct requirements</button>
+              <p id="requirements-review-status" role="status" aria-live="polite"></p>
+              <div id="requirements-editor" hidden>
+                <p>Edit the extracted requirements against the original JD below.
+                  Source excerpts must be copied exactly from that JD. This review
+                  makes no AI request. Saving changes makes dependent outputs stale.</p>
+                <label>Company name <input id="requirements-company" type="text"></label>
+                <label>Job title <input id="requirements-title" type="text"></label>
+                <div id="requirements-rows"></div>
+                <button id="requirements-add" type="button">Add requirement</button>
+                <p id="requirements-duplicates"></p>
+                <label><input id="requirements-confirm" type="checkbox">
+                  I reviewed these exact requirements and supporting JD excerpts.</label>
+                <button id="requirements-save" type="button" disabled>Save reviewed requirements</button>
+                <button id="requirements-cancel" type="button">Cancel edits</button>
+              </div>
 
               <h4>Qualifications</h4>
               <ul id="qualification-list"></ul>
@@ -252,6 +269,7 @@
   </main>
 
   <script src="saved-jobs.js" defer></script>
+  <script src="requirements-review-ui.js" defer></script>
   <script src="resume-ui.js" defer></script>
   <script src="preparation-ui.js" defer></script>
   <script src="coaching-ui.js" defer></script>

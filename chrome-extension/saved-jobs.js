@@ -254,16 +254,20 @@ function displayRequirements(result, captureUuid) {
   );
 
   currentRequirements = result;
+  document.dispatchEvent(new CustomEvent("requirements-loaded", {
+    detail: { captureUuid, requirements: result }
+  }));
   ui.extract.textContent = "Requirements saved";
   ui.requirements.hidden = false;
   ui.extractionStatus.textContent = (
-    `${result.requirements.length} saved AI-extracted requirements. `
+    `${result.requirements.length} saved requirements. `
     + "Review the classifications and supporting excerpts. "
-    + "Saved does not mean user-approved."
+    + "Use Review or correct requirements to save changes."
   );
 }
 
 async function loadSavedMatch(captureUuid) {
+  const openedRequirements = currentRequirements;
   clearMatch();
   ui.matchStatus.textContent = "Checking for a saved match report…";
 
@@ -272,6 +276,7 @@ async function loadSavedMatch(captureUuid) {
       `/captures/${encodeURIComponent(captureUuid)}/profile-match`
     );
 
+    if (selectedCaptureUuid !== captureUuid || currentRequirements !== openedRequirements) return;
     if (report === null) {
       ui.matchStatus.textContent = (
         "No saved match for the current profile and requirements. "
@@ -287,6 +292,7 @@ async function loadSavedMatch(captureUuid) {
       + "Saved does not mean user-approved."
     );
   } catch (error) {
+    if (selectedCaptureUuid !== captureUuid || currentRequirements !== openedRequirements) return;
     ui.matchResult.hidden = true;
     ui.matchStatus.textContent = (
       error.message || "Could not load the saved match report."
@@ -531,6 +537,7 @@ async function extractSelectedRequirements() {
       { method: "POST", timeoutMs: 75000 }
     );
     displayRequirements(result, captureUuid);
+    refreshDependentViews(captureUuid);
   } catch (error) {
     ui.extractionStatus.textContent = (
       error.message || "Extraction failed."
@@ -761,6 +768,28 @@ async function assessSelectedProfile() {
     setBusy(false);
   }
 }
+
+function refreshDependentViews(captureUuid) {
+  document.dispatchEvent(new CustomEvent("resume-capture-cleared", {
+    detail: { preserveRequirementsReview: true }
+  }));
+  document.dispatchEvent(new CustomEvent("resume-capture-opened", {
+    detail: { captureUuid }
+  }));
+}
+
+document.addEventListener("requirements-review-saved", async (event) => {
+  const { captureUuid, requirements } = event.detail;
+  if (captureUuid !== selectedCaptureUuid) return;
+  clearMatch();
+  displayRequirements(requirements, captureUuid);
+  ui.extractionStatus.textContent = (
+    "Reviewed requirements saved. Dependent outputs must use this revision."
+  );
+  refreshDependentViews(captureUuid);
+  await loadSavedMatch(captureUuid);
+  await loadListMatchSummaries();
+});
 
 ui.refresh.addEventListener("click", refreshCaptures);
 ui.extract.addEventListener("click", extractSelectedRequirements);

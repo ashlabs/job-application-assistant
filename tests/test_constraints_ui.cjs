@@ -16,6 +16,7 @@ function harness() {
   const context = vm.createContext({
     console,
     document: {
+      addEventListener() {},
       getElementById(id) {
         if (!elements.has(id)) elements.set(id, element());
         return elements.get(id);
