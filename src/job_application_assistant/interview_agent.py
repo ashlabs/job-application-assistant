@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 from openai import OpenAIError
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from job_application_assistant.fact_capture import FactUpdate, apply_fact_update
 from job_application_assistant.interview_state import InterviewState
 from job_application_assistant.models import (
     CareerProfile,
@@ -37,6 +38,7 @@ class StoryTurn(BaseModel):
     result: str | None
     reflection: str | None
 
+    fact_update: FactUpdate | None = None
     education_update: EducationUpdate | None
     next_question: str
 
@@ -130,6 +132,20 @@ After the active story and its role are sufficiently covered, ask about
 education if none is recorded, unless the user skipped that topic.
 Ask for missing education details one at a time; accept unknown answers.
 Do not prevent the user from requesting review with incomplete information.
+
+PROFILE FACTS
+Capture explicit preferences, standalone skills, and projects in fact_update.
+Use category preference, skill, or project, a short name, and a factual statement
+in the user's terms. Include only explicitly supplied details and durations.
+Never infer proficiency, willingness to relocate, work authorization, availability,
+or a project outcome. Do not turn a job requirement into a candidate fact.
+For corrections use an exact existing_fact_uuid from profile_facts. Clarify
+contradictions and ambiguous identities before replacing a statement. Null means
+preserve; return null for fact_update when no new facts were supplied.
+For a fact-only answer leave employment, story, and education fields null.
+Ask about missing preferences, skills, and projects one topic at a time when
+career experience is covered; respect skipped topics and requests for review.
+Facts are draft proposals only; approval is required before downstream use.
 
 QUESTIONS
 Ask one concise question at a time, based on missing or unclear details.
@@ -270,6 +286,10 @@ def create_interview_step(llm):
                         record.model_dump(mode="json")
                         for record in profile.education
                     ],
+                    "profile_facts": [
+                        fact.model_dump(mode="json")
+                        for fact in profile.facts
+                    ],
                     "skipped_topics": state["skipped_topics"]
                 }
             )
@@ -300,7 +320,8 @@ def create_interview_step(llm):
                     "start_date",
                     "end_date",
                     "is_current",
-                    "education_update"
+                    "education_update",
+                    "fact_update"
                 }
             )
             updates = {
@@ -424,6 +445,9 @@ def create_interview_step(llm):
                     profile,
                     turn.education_update
                 )
+
+            if turn.fact_update is not None:
+                profile = apply_fact_update(profile, turn.fact_update)
 
             return {
                 "draft_profile": profile.model_dump(mode="json"),

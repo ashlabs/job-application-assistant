@@ -74,6 +74,17 @@ class EducationRecord(BaseModel):
     ] = "unknown"
     completion_date: NonEmptyText | None = None
 
+class ProfileFact(BaseModel):
+    """A user-supplied preference, skill, or project with stable identity."""
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    fact_uuid: UUID = Field(default_factory=uuid4)
+    category: Literal["preference", "skill", "project"]
+    name: NonEmptyText
+    statement: NonEmptyText
+
+
 class CareerProfile(BaseModel):
     """Career records with validated identifiers and role references."""
 
@@ -85,6 +96,8 @@ class CareerProfile(BaseModel):
     roles: list[EmploymentRecord] = Field(default_factory=list)
     stories: list[ExperienceStory] = Field(default_factory=list)
     education: list[EducationRecord] = Field(default_factory=list)
+
+    facts: list[ProfileFact] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_record_links(self) -> "CareerProfile":
@@ -101,6 +114,10 @@ class CareerProfile(BaseModel):
             raise ValueError(
                 "Experience stories have duplicate story_uuid values."
                 )
+
+        fact_ids = [fact.fact_uuid for fact in self.facts]
+        if len(fact_ids) != len(set(fact_ids)):
+            raise ValueError("Profile facts have duplicate fact_uuid values.")
 
         known_roles = set(role_ids)
         education_ids = [

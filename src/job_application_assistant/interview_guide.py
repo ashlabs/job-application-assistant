@@ -21,6 +21,7 @@ from job_application_assistant.profile_match_service import (
 )
 from job_application_assistant.profile_match_validation import (
     EDUCATION_EVIDENCE_FIELDS,
+    FACT_EVIDENCE_FIELDS,
     ROLE_EVIDENCE_FIELDS,
     STORY_EVIDENCE_FIELDS,
     profile_revision,
@@ -97,7 +98,8 @@ those fields are present in the education record.
 
 For each question, draft a concise answer only when the approved profile
 contains relevant evidence. Cite exact excerpts from allowed fields in
-existing role, story, or education records.
+existing role, story, education, or fact records.
+A preference does not establish competence or project experience.
 Preserve personal versus team ownership, dates, and education status.
 Do not invent technical details, metrics, results, durations, or skills.
 Do not treat in-progress education as an awarded degree.
@@ -175,6 +177,7 @@ def validate_guide(guide, profile, requirements, bundle):
     for record_type, items, id_field, allowed in [
         ("role", profile.roles, "role_uuid", ROLE_EVIDENCE_FIELDS),
         ("story", profile.stories, "story_uuid", STORY_EVIDENCE_FIELDS),
+        ("fact", profile.facts, "fact_uuid", FACT_EVIDENCE_FIELDS),
         (
             "education", profile.education, "education_uuid",
             EDUCATION_EVIDENCE_FIELDS,
@@ -275,6 +278,7 @@ def generate_guide(llm, profile, requirements, bundle, recruiter_guidance=""):
                 "role": sorted(ROLE_EVIDENCE_FIELDS),
                 "story": sorted(STORY_EVIDENCE_FIELDS),
                 "education": sorted(EDUCATION_EVIDENCE_FIELDS),
+                "fact": sorted(FACT_EVIDENCE_FIELDS),
             },
         },
         ensure_ascii=False,

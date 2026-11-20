@@ -113,13 +113,9 @@ def test_assessor_returns_validated_match_without_changing_inputs(
     assert context["qualifications"][0]["kind"] == "qualification"
 
 
-def test_no_qualifications_skips_model_call(assessment_example):
+def test_no_requirements_skips_model_call(assessment_example):
     profile, requirements, _ = assessment_example
-    requirements.requirements = [
-        item
-        for item in requirements.requirements
-        if item.kind == "constraint"
-    ]
+    requirements.requirements = []
     model = FakeModel(AssertionError("Unexpected model call"))
 
     result = create_profile_match_assessor(model)(profile, requirements)

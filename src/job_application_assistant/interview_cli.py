@@ -214,9 +214,11 @@ def main() -> None:
                         profile.roles
                         or profile.stories
                         or profile.education
+                        or profile.facts
                     ):
                         print(
-                            "Capture some career experience or education "
+                            "Capture some career experience, education, or "
+                            "profile facts "
                             "before preparing a review."
                         )
                         continue

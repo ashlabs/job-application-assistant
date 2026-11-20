@@ -26,6 +26,7 @@ const ui = {
   calculation: document.getElementById("match-calculation"),
   exclusions: document.getElementById("match-exclusions"),
   assessments: document.getElementById("assessment-list"),
+  constraintAssessments: document.getElementById("constraint-assessment-list"),
   sort: document.getElementById("job-sort")
 };
 
@@ -110,6 +111,7 @@ function clearMatch() {
   ui.calculation.textContent = "";
   ui.exclusions.textContent = "";
   ui.assessments.replaceChildren();
+  ui.constraintAssessments.replaceChildren();
 }
 
 function clearDetail() {
@@ -538,7 +540,7 @@ async function extractSelectedRequirements() {
   }
 }
 
-function renderAssessment(assessment, requirement) {
+function renderAssessment(assessment, requirement, labels = CLASSIFICATION_LABELS) {
   const item = document.createElement("li");
   const heading = document.createElement("p");
   const classification = document.createElement("p");
@@ -546,7 +548,7 @@ function renderAssessment(assessment, requirement) {
 
   heading.textContent = requirement.description;
   classification.textContent = (
-    `${CLASSIFICATION_LABELS[assessment.classification]} `
+    `${labels[assessment.classification]} `
     + `— ${requirement.importance}`
   );
   explanation.textContent = assessment.explanation;
@@ -667,6 +669,45 @@ function displayMatch(report, captureUuid) {
     fragment.append(empty);
   }
 
+  const constraintFragment = document.createDocumentFragment();
+  const labels = {
+    compatible: "Compatible",
+    blocking: "Blocking constraint",
+    needs_clarification: "Needs clarification"
+  };
+  if (match.constraints == null) {
+    const item = document.createElement("li");
+    item.textContent = "Practical constraints have not been assessed in this report.";
+    constraintFragment.append(item);
+  } else {
+    if (!Array.isArray(match.constraints)) {
+      throw new Error("The API returned invalid practical constraints.");
+    }
+    const seen = new Set();
+    for (const assessment of match.constraints) {
+      const requirement = requirementsById.get(assessment.requirement_uuid);
+      if (!requirement || requirement.kind !== "constraint"
+          || seen.has(assessment.requirement_uuid)
+          || !Object.hasOwn(labels, assessment.classification)
+          || !Array.isArray(assessment.evidence)
+          || (assessment.classification !== "needs_clarification"
+              && assessment.evidence.length === 0)) {
+        throw new Error("The report contains an invalid practical constraint.");
+      }
+      seen.add(assessment.requirement_uuid);
+      constraintFragment.append(renderAssessment(assessment, requirement, labels));
+    }
+    const expected = currentRequirements.requirements.filter(item => item.kind === "constraint");
+    if (seen.size !== expected.length) {
+      throw new Error("The report does not cover every practical constraint.");
+    }
+    if (seen.size === 0) {
+      const item = document.createElement("li");
+      item.textContent = "No practical constraints were extracted.";
+      constraintFragment.append(item);
+    }
+  }
+  ui.constraintAssessments.replaceChildren(constraintFragment);
   ui.assessments.replaceChildren(fragment);
   ui.percentage.textContent = (
     percentage === null

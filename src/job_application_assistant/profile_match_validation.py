@@ -8,6 +8,9 @@ from job_application_assistant.models import CareerProfile
 from job_application_assistant.profile_match import ProfileMatch
 
 
+FACT_EVIDENCE_FIELDS = {"name", "statement"}
+
+
 ROLE_EVIDENCE_FIELDS = {
     "employer",
     "job_title",
@@ -116,6 +119,21 @@ def validate_profile_match(
             "Do not include practical constraints."
         )
 
+    if validated_match.constraints is not None:
+        constraint_ids = {
+            item.requirement_uuid
+            for item in validated_requirements.requirements
+            if item.kind == "constraint"
+        }
+        assessed_constraints = [
+            item.requirement_uuid for item in validated_match.constraints
+        ]
+        if (
+            len(assessed_constraints) != len(set(assessed_constraints))
+            or set(assessed_constraints) != constraint_ids
+        ):
+            raise ValueError("Assess every practical constraint exactly once.")
+
     roles = {
         role.role_uuid: role.model_dump(mode="json")
         for role in validated_profile.roles
@@ -129,7 +147,14 @@ def validate_profile_match(
         for record in validated_profile.education
     }
 
-    for assessment in validated_match.assessments:
+    facts = {
+        record.fact_uuid: record.model_dump(mode="json")
+        for record in validated_profile.facts
+    }
+    all_assessments = (
+        validated_match.assessments + (validated_match.constraints or [])
+    )
+    for assessment in all_assessments:
         for evidence in assessment.evidence:
             if evidence.record_type == "role":
                 record = roles.get(evidence.record_uuid)
@@ -137,6 +162,9 @@ def validate_profile_match(
             elif evidence.record_type == "story":
                 record = stories.get(evidence.record_uuid)
                 allowed_fields = STORY_EVIDENCE_FIELDS
+            elif evidence.record_type == "fact":
+                record = facts.get(evidence.record_uuid)
+                allowed_fields = FACT_EVIDENCE_FIELDS
             else:
                 record = education.get(evidence.record_uuid)
                 allowed_fields = EDUCATION_EVIDENCE_FIELDS

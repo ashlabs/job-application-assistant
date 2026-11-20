@@ -142,3 +142,21 @@ def test_recruiter_guidance_is_separate_from_company_sources(guide_case):
     assert "Recruiter guidance — user supplied" in rendered
     assert guidance in rendered
     assert result.documented_hiring_information == []
+
+
+def test_approved_project_fact_is_citable_but_invented_excerpt_is_rejected(guide_case):
+    from job_application_assistant.models import ProfileFact
+    from job_application_assistant.profile_match_agent import EvidenceResponse
+    guide, profile, requirements, bundle = guide_case
+    fact = ProfileFact(category="project", name="Reliability initiative",
+                       statement="I coached engineers during a reliability initiative.")
+    profile.facts = [fact]
+    question = guide.practice_questions[0]
+    question.answer_draft = fact.statement
+    question.clarification = None
+    question.evidence = [EvidenceResponse(record_type="fact", record_uuid=str(fact.fact_uuid),
+        field_name="statement", excerpt=fact.statement)]
+    validate_guide(guide, profile, requirements, bundle)
+    question.evidence[0].excerpt = "I managed 50 engineers."
+    with pytest.raises(ValueError):
+        validate_guide(guide, profile, requirements, bundle)

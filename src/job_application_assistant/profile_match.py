@@ -16,7 +16,7 @@ class ProfileEvidence(BaseModel):
         validate_assignment=True
     )
 
-    record_type: Literal["role", "story", "education"]
+    record_type: Literal["role", "story", "education", "fact"]
     record_uuid: UUID
     field_name: NonEmptyText
     excerpt: NonEmptyText
@@ -54,6 +54,22 @@ class QualificationAssessment(BaseModel):
         return self
 
 
+class ConstraintAssessment(BaseModel):
+    """Practical compatibility; never qualification credit."""
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+    requirement_uuid: UUID
+    classification: Literal["compatible", "blocking", "needs_clarification"]
+    explanation: NonEmptyText
+    evidence: list[ProfileEvidence] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def require_evidence(self) -> "ConstraintAssessment":
+        if self.classification != "needs_clarification" and not self.evidence:
+            raise ValueError("Compatibility and blockers require profile evidence.")
+        return self
+
+
 class ProfileMatch(BaseModel):
     """Assessments tied to specific requirements and profile versions."""
 
@@ -66,3 +82,4 @@ class ProfileMatch(BaseModel):
     requirements_sha256: NonEmptyText
     profile_sha256: NonEmptyText
     assessments: list[QualificationAssessment] = Field(default_factory=list)
+    constraints: list[ConstraintAssessment] | None = None

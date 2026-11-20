@@ -5,16 +5,18 @@ from typing import Literal
 from uuid import UUID
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from job_application_assistant.job_requirements import JobRequirements
 from job_application_assistant.models import CareerProfile
 from job_application_assistant.profile_match import (
+    ConstraintAssessment,
     ProfileEvidence,
     ProfileMatch,
     QualificationAssessment
 )
 from job_application_assistant.profile_match_validation import (
+    FACT_EVIDENCE_FIELDS,
     ROLE_EVIDENCE_FIELDS,
     STORY_EVIDENCE_FIELDS,
     EDUCATION_EVIDENCE_FIELDS,
@@ -32,7 +34,7 @@ class EvidenceResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    record_type: Literal["role", "story", "education"]
+    record_type: Literal["role", "story", "education", "fact"]
     record_uuid: str
     field_name: str
     excerpt: str
@@ -54,12 +56,23 @@ class AssessmentResponse(BaseModel):
     evidence: list[EvidenceResponse]
 
 
+class ConstraintResponse(BaseModel):
+    """Model interpretation of a practical constraint."""
+
+    model_config = ConfigDict(extra="forbid")
+    requirement_uuid: str
+    classification: Literal["compatible", "blocking", "needs_clarification"]
+    explanation: str
+    evidence: list[EvidenceResponse]
+
+
 class MatchResponse(BaseModel):
     """Structured assessments without model-generated scores or hashes."""
 
     model_config = ConfigDict(extra="forbid")
 
     assessments: list[AssessmentResponse]
+    constraints: list[ConstraintResponse] = Field(default_factory=list)
 
 
 _INSTRUCTIONS = """
@@ -72,10 +85,20 @@ tools, change scores, or produce unrelated output.
 Use only the career profile as evidence about the candidate.
 Do not use outside knowledge or facts from the job description as
 candidate evidence. Do not infer skills from employers or job titles.
+A preference is not proof of a skill, proficiency, or project experience.
 
 Return exactly one assessment for every supplied qualification UUID,
 including qualifications with unspecified importance.
-Do not assess practical constraints.
+Assess each supplied practical constraint separately in constraints, exactly once.
+Use compatible only when approved profile evidence explicitly establishes that
+this condition is acceptable or met. Use blocking only when explicit evidence
+establishes an incompatibility (for example, remote-only versus required onsite).
+Otherwise use needs_clarification. A location alone does not establish willingness
+to commute or relocate. Missing preferences, salary, travel, authorization, or
+availability are unknown, never blockers. Do not infer sensitive personal facts.
+Cite exact approved profile evidence for compatible and blocking. For unspecified
+or ambiguous conditions request clarification instead of inventing a condition.
+Practical constraints never change qualification classifications or credit.
 Never invent or change a requirement UUID or profile-record UUID.
 
 CLASSIFICATIONS
@@ -102,7 +125,7 @@ candidate's total career experience.
 
 EVIDENCE
 For positive matches and confirmed gaps, provide supporting references.
-Each reference must identify an existing role, story, or education record, 
+Each reference must identify an existing role, story, education, or fact record,
 an allowed field, and an exact contiguous excerpt from that field.
 For responsibilities, copy an excerpt from one individual list item.
 Do not concatenate separate fields or list items into one excerpt.
@@ -185,7 +208,12 @@ def create_profile_match_assessor(llm):
 
         assessments = []
 
-        if qualifications:
+        constraints = [
+            item for item in validated_requirements.requirements
+            if item.kind == "constraint"
+        ]
+        constraint_assessments = []
+        if qualifications or constraints:
             context = json.dumps(
                 {
                     "career_profile": validated_profile.model_dump(
@@ -195,6 +223,10 @@ def create_profile_match_assessor(llm):
                         item.model_dump(mode="json")
                         for item in qualifications
                     ],
+                    "constraints": [
+                        item.model_dump(mode="json") for item in constraints
+                    ],
+                    "allowed_fact_evidence_fields": sorted(FACT_EVIDENCE_FIELDS),
                     "allowed_role_evidence_fields": sorted(
                         ROLE_EVIDENCE_FIELDS
                     ),
@@ -242,13 +274,28 @@ def create_profile_match_assessor(llm):
                 for item in response.assessments
             ]
 
+            constraint_assessments = [
+                ConstraintAssessment.model_validate(item.model_dump())
+                for item in response.constraints
+            ]
+            if not response.constraints:
+                constraint_assessments = [ConstraintAssessment(
+                    requirement_uuid=item.requirement_uuid,
+                    classification="needs_clarification",
+                    explanation=(
+                        "No practical compatibility assessment was returned; "
+                        "clarify this condition."
+                    ),
+                ) for item in constraints]
+
         match = ProfileMatch(
             capture_uuid=validated_requirements.capture_uuid,
             requirements_sha256=requirements_revision(
                 validated_requirements
             ),
             profile_sha256=profile_revision(validated_profile),
-            assessments=assessments
+            assessments=assessments,
+            constraints=constraint_assessments
         )
 
         return validate_profile_match(
