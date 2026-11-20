@@ -14,8 +14,14 @@ dependencies = [
     "pydantic>=2",
     "python-dotenv",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "python-docx",
+    "reportlab",
+    "pypdf"
 ]
+
+[project.scripts]
+agentic-job-assistant = "job_application_assistant.system_cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest", "httpx"]
