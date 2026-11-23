@@ -1,0 +1,23 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Credentials
+.env
+.env.*
+!.env.example
+
+# Personal data, sessions, logs, and generated documents
+data/private/
+runtime/
+outputs/
+career_profile.md
+
+# Notebook checkpoints and macOS files
+.ipynb_checkpoints/
+.DS_Store
+
+*.egg-info/

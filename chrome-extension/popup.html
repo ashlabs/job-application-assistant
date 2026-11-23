@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Save job description</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1>Save job description</h1>
+
+    <button id="open-saved-jobs" type="button">
+      View saved job descriptions
+    </button>
+
+    <details id="settings">
+      <summary>Connection settings</summary>
+
+      <label for="api-token">Local capture token</label>
+      <input
+        id="api-token"
+        type="password"
+        autocomplete="off"
+        spellcheck="false"
+        aria-describedby="token-help"
+      >
+      <p id="token-help">
+        Use CAPTURE_API_TOKEN from your project's .env file.
+      </p>
+
+      <button id="save-settings" type="button">
+        Save settings
+      </button>
+    </details>
+
+    <section aria-labelledby="capture-heading">
+      <h2 id="capture-heading">Capture text</h2>
+
+      <p>
+        Capture the page, use selected text, or paste the job description.
+        Review the text before saving.
+      </p>
+
+      <div class="actions">
+        <button id="capture-page" type="button">Capture page</button>
+        <button id="capture-selection" type="button">
+          Use selected text
+        </button>
+        <button id="start-paste" type="button">Paste instead</button>
+      </div>
+    </section>
+
+    <form id="capture-form">
+      <label for="source-url">Source URL</label>
+      <input id="source-url" type="url" required>
+
+      <label for="page-title">Page title (optional)</label>
+      <input id="page-title" type="text">
+
+      <dl>
+        <dt>Captured at</dt>
+        <dd id="captured-at">Not captured yet</dd>
+
+        <dt>Capture method</dt>
+        <dd id="capture-method">Not selected</dd>
+      </dl>
+
+      <label for="jd-text">Job description</label>
+      <textarea
+        id="jd-text"
+        rows="14"
+        required
+        aria-describedby="jd-help"
+      ></textarea>
+      <p id="jd-help">
+        Remove navigation, unrelated listings, and other unwanted text.
+      </p>
+
+      <label class="confirmation">
+        <input id="confirmed" type="checkbox" required>
+        I reviewed this text and want to save it.
+      </label>
+
+      <div class="actions">
+        <button id="save-capture" type="submit" disabled>
+          Save job description
+        </button>
+        <button id="discard-capture" type="button">
+          Discard draft
+        </button>
+      </div>
+    </form>
+
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="popup.js" defer></script>
+</body>
+</html>

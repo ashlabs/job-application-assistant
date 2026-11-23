@@ -1,0 +1,686 @@
+{
+  "schema_version": 1,
+  "evidence_type": "reviewed_selected_and_redacted_saved_outputs",
+  "source_note": "Derived from three user-uploaded API snapshots. This is not a new model run or a signed audit log. Original collection times are not provider execution times.",
+  "redactions": [
+    "Full JD and captured page text omitted; source URLs, titles and exact guide citation excerpt retained.",
+    "Resume review token omitted.",
+    "Practice answers and feedback explanations omitted because they contained personal education details. Numeric ratings, generic follow-up questions and profile-correction suggestions retained."
+  ],
+  "cases": [
+    {
+      "case": "A",
+      "snapshot_collected_at_utc": "2026-11-20T20:29:26.914717+00:00",
+      "original_bundle_sha256": "b715cd06635716322815c0b8c92536ae958fb76752f5db189075d3ce0b769cfb",
+      "provider_requests_during_collection": 0,
+      "statuses": {
+        "capture": 200,
+        "requirements": 200,
+        "match": 200,
+        "resume": 409,
+        "research": 409,
+        "interview_guide": 409,
+        "practice_sessions": 200,
+        "practice": 200
+      },
+      "errors": {
+        "resume": "The profile changed. Generate a new draft.",
+        "research": "Research company no longer matches the saved job.",
+        "interview_guide": "This guide needs refresh: the profile, job, or research changed. Review current sources and generate a new guide."
+      },
+      "practice_context_outdated": true
+    },
+    {
+      "case": "B",
+      "snapshot_collected_at_utc": "2026-11-20T20:45:33.906368+00:00",
+      "original_bundle_sha256": "b8f7880d7af35c68675aabd2fed86146c4ef502b82f227bafef11682f17297a2",
+      "provider_requests_during_collection": 0,
+      "statuses": {
+        "capture": 200,
+        "requirements": 200,
+        "match": 200,
+        "resume": 200,
+        "research": 200,
+        "interview_guide": 409,
+        "practice_sessions": 200,
+        "practice": 200
+      },
+      "errors": {
+        "interview_guide": "This guide needs refresh: the profile, job, or research changed. Review current sources and generate a new guide."
+      },
+      "practice_context_outdated": true
+    },
+    {
+      "case": "C",
+      "snapshot_collected_at_utc": "2026-11-20T21:51:06.342469+00:00",
+      "original_bundle_sha256": "78e7746e5b975328c3d72f4b5bdcac399232589ec7ea91fc7bebe85b3cd05c50",
+      "provider_requests_during_collection": 0,
+      "statuses": {
+        "capture": 200,
+        "requirements": 200,
+        "match": 200,
+        "resume": 200,
+        "research": 200,
+        "interview_guide": 200,
+        "practice_sessions": 200,
+        "practice": 200
+      },
+      "errors": {},
+      "practice_context_outdated": false
+    }
+  ],
+  "current": {
+    "capture_uuid": "69f3f8cf-6b97-4ca6-bc5d-ea1a2dd4de6e",
+    "source_url": "https://www.google.com/about/careers/applications/jobs/recommendations/142381403785306822-tech-lead-manager-fullstack-display-and-video-360-inventory-and-deals",
+    "job_title": "Tech Lead Manager, Full-Stack, Display and Video 360 Inventory and Deals — Google Careers",
+    "approved_fictional_profile": {
+      "roles": [
+        {
+          "role_uuid": "ff76bede-8e44-4acb-ab81-f202a8dcf547",
+          "employer": "Example Company",
+          "job_title": "Engineering Manager",
+          "start_date": "2018-01",
+          "end_date": "2022-12",
+          "is_current": false,
+          "responsibilities": [],
+          "scope": null
+        }
+      ],
+      "stories": [
+        {
+          "story_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+          "role_uuid": "ff76bede-8e44-4acb-ab81-f202a8dcf547",
+          "title": "Assigning Responsibilities for a Service Reliability Initiative",
+          "situation": "A service reliability initiative",
+          "task": null,
+          "action": "Assigned responsibilities, coached the engineers, and led weekly delivery reviews.",
+          "result": "The team launched the reliability improvements.",
+          "reflection": null
+        }
+      ],
+      "education": [
+        {
+          "education_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+          "qualification": "Bachelor of Science",
+          "institution": "Example University",
+          "field_of_study": "Computer Science",
+          "status": "completed",
+          "completion_date": "2011"
+        },
+        {
+          "education_uuid": "6bd0e2c5-4a39-4d85-bc99-01009650c622",
+          "qualification": "Master of Science",
+          "institution": "Example Institute",
+          "field_of_study": "Artificial Intelligence",
+          "status": "in_progress",
+          "completion_date": null
+        }
+      ],
+      "facts": [
+        {
+          "fact_uuid": "1233c2fe-dc87-498b-b1d1-dc6d39429ece",
+          "category": "preference",
+          "name": "Work arrangement",
+          "statement": "Only accepts fully remote roles."
+        }
+      ]
+    },
+    "requirements": {
+      "capture_uuid": "69f3f8cf-6b97-4ca6-bc5d-ea1a2dd4de6e",
+      "jd_text_sha256": "e043360316ebf405fe9f154ea34e7b2d80f3b6d96db2f1618e9896659af1535d",
+      "company_name": "Google",
+      "job_title": "Tech Lead Manager, Full-Stack, Display and Video 360 Inventory and Deals",
+      "requirements": [
+        {
+          "requirement_uuid": "bef61493-5ca6-4bd7-9832-52c0e9ad9784",
+          "description": "Bachelor's degree or equivalent practical experience.",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "Bachelor's degree or equivalent practical experience."
+        },
+        {
+          "requirement_uuid": "5adf2e12-5f9d-421c-ac08-dc88a6bd2410",
+          "description": "8 years of software development experience, including 5 years of experience testing and launching software products.",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "8 years of experience in software development, including 5 years of experience testing and launching software products."
+        },
+        {
+          "requirement_uuid": "8501e639-dabd-4825-97f5-910fd7bc4265",
+          "description": "5 years of full-stack development experience across back-end technologies (e.g., Java, Python, Golang, C++) and front-end technologies (e.g., JavaScript, TypeScript, HTML, CSS).",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "5 years of experience with full-stack development, across back-end (e.g., Java, Python, Golang, C++) and front-end (e.g., JavaScript, TypeScript, HTML, CSS)."
+        },
+        {
+          "requirement_uuid": "8b601ae4-8839-4371-b257-0639d93ab1ec",
+          "description": "3 years of experience with software design and architecture.",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "3 years of experience with software design and architecture."
+        },
+        {
+          "requirement_uuid": "49f44cac-8114-4588-bb01-e5c755053a19",
+          "description": "Experience in people leadership or team management and management.",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "Experience in people leadership or team management and management."
+        },
+        {
+          "requirement_uuid": "33d3ff87-86d8-4d2a-8e2c-93b63a964ed1",
+          "description": "Master’s degree or PhD in Engineering, Computer Science, or a related technical field.",
+          "kind": "qualification",
+          "importance": "preferred",
+          "source_excerpt": "Master’s degree or PhD in Engineering, Computer Science, or a related technical field."
+        },
+        {
+          "requirement_uuid": "b4a39923-19f3-4c88-964e-74772a3f0134",
+          "description": "3 years of experience in a technical leadership role, leading project teams and setting technical direction.",
+          "kind": "qualification",
+          "importance": "preferred",
+          "source_excerpt": "3 years of experience in a technical leadership role leading project teams and setting technical direction."
+        },
+        {
+          "requirement_uuid": "d60cd4ad-293a-4096-b5f1-8f5328c696b7",
+          "description": "3 years of experience working in a complex, matrixed organization involving cross-functional or cross-business projects.",
+          "kind": "qualification",
+          "importance": "preferred",
+          "source_excerpt": "3 years of experience working in a complex, matrixed organization involving cross-functional or cross-business projects."
+        },
+        {
+          "requirement_uuid": "e7c3a446-1da8-47a4-b866-e6385a373c35",
+          "description": "Experience or strong interest in integrating LLMs or recommendation systems into production user experiences.",
+          "kind": "qualification",
+          "importance": "preferred",
+          "source_excerpt": "Experience or strong interest in integrating LLMs or recommendation systems into production user experiences."
+        },
+        {
+          "requirement_uuid": "7e2726ff-b607-4f09-9840-034b4672fa83",
+          "description": "Strong technical background as a full-stack or backend engineer, with experience building large-scale, high-availability distributed systems.",
+          "kind": "qualification",
+          "importance": "preferred",
+          "source_excerpt": "Demonstrated strong technical background as a full-stack or backend engineer with experience building large-scale, high-availability distributed systems."
+        },
+        {
+          "requirement_uuid": "4271ce65-233c-400b-afc5-af2ae3e953ca",
+          "description": "The listed job location is Kirkland, WA, USA.",
+          "kind": "constraint",
+          "importance": "unspecified",
+          "source_excerpt": "Kirkland, WA, USA"
+        },
+        {
+          "requirement_uuid": "88ebdb9a-c3d4-4ac5-97c8-7f8472542e7b",
+          "description": "In most instances, the hiring process requires in-person interviews.",
+          "kind": "constraint",
+          "importance": "required",
+          "source_excerpt": "In most instances, this position requires in-person interviews as part of the hiring process."
+        },
+        {
+          "requirement_uuid": "d6d45574-73e8-4561-ac3f-f10c00808ef5",
+          "description": "English proficiency is required unless the job posting states otherwise.",
+          "kind": "qualification",
+          "importance": "required",
+          "source_excerpt": "Google is a global company and, in order to facilitate efficient collaboration and communication globally, English proficiency is a requirement for all roles unless stated otherwise in the job posting."
+        }
+      ]
+    },
+    "match_report": {
+      "match": {
+        "capture_uuid": "69f3f8cf-6b97-4ca6-bc5d-ea1a2dd4de6e",
+        "requirements_sha256": "7a6ac06ef53463348336ed41fbde2ad43b6879182a19104c567d0978cb74228b",
+        "profile_sha256": "6a04fde069f2b4688836073ac457c4059e3dc0548a00112582af6f286e6703e4",
+        "assessments": [
+          {
+            "requirement_uuid": "bef61493-5ca6-4bd7-9832-52c0e9ad9784",
+            "classification": "strong_match",
+            "explanation": "A completed Bachelor of Science in Computer Science directly meets the degree option.",
+            "evidence": [
+              {
+                "record_type": "education",
+                "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+                "field_name": "qualification",
+                "excerpt": "Bachelor of Science"
+              },
+              {
+                "record_type": "education",
+                "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+                "field_name": "status",
+                "excerpt": "completed"
+              },
+              {
+                "record_type": "education",
+                "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+                "field_name": "field_of_study",
+                "excerpt": "Computer Science"
+              }
+            ]
+          },
+          {
+            "requirement_uuid": "5adf2e12-5f9d-421c-ac08-dc88a6bd2410",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document software development experience or testing and launching software products, so neither requested duration is established.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "8501e639-dabd-4825-97f5-910fd7bc4265",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document full-stack development or the specified back-end and front-end experience, and does not establish the five-year duration.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "8b601ae4-8839-4371-b257-0639d93ab1ec",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document software design or architecture experience or establish the requested three-year duration.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "49f44cac-8114-4588-bb01-e5c755053a19",
+            "classification": "strong_match",
+            "explanation": "The documented initiative includes assigning responsibilities, coaching engineers, and leading delivery reviews, directly supporting people leadership and team management.",
+            "evidence": [
+              {
+                "record_type": "story",
+                "record_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+                "field_name": "action",
+                "excerpt": "Assigned responsibilities, coached the engineers, and led weekly delivery reviews."
+              }
+            ]
+          },
+          {
+            "requirement_uuid": "33d3ff87-86d8-4d2a-8e2c-93b63a964ed1",
+            "classification": "evidence_missing",
+            "explanation": "The profile lists a Master of Science in Artificial Intelligence as in progress, not completed; no completed Master's degree or PhD is documented.",
+            "evidence": [
+              {
+                "record_type": "education",
+                "record_uuid": "6bd0e2c5-4a39-4d85-bc99-01009650c622",
+                "field_name": "qualification",
+                "excerpt": "Master of Science"
+              },
+              {
+                "record_type": "education",
+                "record_uuid": "6bd0e2c5-4a39-4d85-bc99-01009650c622",
+                "field_name": "status",
+                "excerpt": "in_progress"
+              },
+              {
+                "record_type": "education",
+                "record_uuid": "6bd0e2c5-4a39-4d85-bc99-01009650c622",
+                "field_name": "field_of_study",
+                "excerpt": "Artificial Intelligence"
+              }
+            ]
+          },
+          {
+            "requirement_uuid": "b4a39923-19f3-4c88-964e-74772a3f0134",
+            "classification": "evidence_missing",
+            "explanation": "The initiative shows team leadership, but does not establish technical direction-setting or three years of technical leadership experience.",
+            "evidence": [
+              {
+                "record_type": "story",
+                "record_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+                "field_name": "action",
+                "excerpt": "Assigned responsibilities, coached the engineers, and led weekly delivery reviews."
+              }
+            ]
+          },
+          {
+            "requirement_uuid": "d60cd4ad-293a-4096-b5f1-8f5328c696b7",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document work in a complex, matrixed organization or cross-functional or cross-business projects, nor establish the three-year duration.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "e7c3a446-1da8-47a4-b866-e6385a373c35",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document LLM or recommendation-system integration, or a strong interest in either.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "7e2726ff-b607-4f09-9840-034b4672fa83",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not document full-stack or backend engineering experience or experience building large-scale, high-availability distributed systems.",
+            "evidence": []
+          },
+          {
+            "requirement_uuid": "d6d45574-73e8-4561-ac3f-f10c00808ef5",
+            "classification": "evidence_missing",
+            "explanation": "The profile does not establish English proficiency.",
+            "evidence": []
+          }
+        ],
+        "constraints": [
+          {
+            "requirement_uuid": "4271ce65-233c-400b-afc5-af2ae3e953ca",
+            "classification": "needs_clarification",
+            "explanation": "The profile states a preference for fully remote roles, but the listed Kirkland location does not establish the role's work arrangement or whether the candidate would commute or relocate.",
+            "evidence": [
+              {
+                "record_type": "fact",
+                "record_uuid": "1233c2fe-dc87-498b-b1d1-dc6d39429ece",
+                "field_name": "statement",
+                "excerpt": "Only accepts fully remote roles."
+              }
+            ]
+          },
+          {
+            "requirement_uuid": "88ebdb9a-c3d4-4ac5-97c8-7f8472542e7b",
+            "classification": "needs_clarification",
+            "explanation": "The profile's remote-role preference does not establish whether the candidate is willing or able to attend in-person interviews; clarify interview availability.",
+            "evidence": [
+              {
+                "record_type": "fact",
+                "record_uuid": "1233c2fe-dc87-498b-b1d1-dc6d39429ece",
+                "field_name": "statement",
+                "excerpt": "Only accepts fully remote roles."
+              }
+            ]
+          }
+        ],
+        "scoring_rules_version": "documented-alignment-v1"
+      },
+      "score": {
+        "scoring_rules_version": "documented-alignment-v1",
+        "contributions": [
+          {
+            "requirement_uuid": "bef61493-5ca6-4bd7-9832-52c0e9ad9784",
+            "importance": "required",
+            "classification": "strong_match",
+            "weight": 2,
+            "classification_credit": 1.0,
+            "earned_weighted_credit": 2.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "5adf2e12-5f9d-421c-ac08-dc88a6bd2410",
+            "importance": "required",
+            "classification": "evidence_missing",
+            "weight": 2,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "8501e639-dabd-4825-97f5-910fd7bc4265",
+            "importance": "required",
+            "classification": "evidence_missing",
+            "weight": 2,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "8b601ae4-8839-4371-b257-0639d93ab1ec",
+            "importance": "required",
+            "classification": "evidence_missing",
+            "weight": 2,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "49f44cac-8114-4588-bb01-e5c755053a19",
+            "importance": "required",
+            "classification": "strong_match",
+            "weight": 2,
+            "classification_credit": 1.0,
+            "earned_weighted_credit": 2.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "33d3ff87-86d8-4d2a-8e2c-93b63a964ed1",
+            "importance": "preferred",
+            "classification": "evidence_missing",
+            "weight": 1,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 1,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "b4a39923-19f3-4c88-964e-74772a3f0134",
+            "importance": "preferred",
+            "classification": "evidence_missing",
+            "weight": 1,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 1,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "d60cd4ad-293a-4096-b5f1-8f5328c696b7",
+            "importance": "preferred",
+            "classification": "evidence_missing",
+            "weight": 1,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 1,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "e7c3a446-1da8-47a4-b866-e6385a373c35",
+            "importance": "preferred",
+            "classification": "evidence_missing",
+            "weight": 1,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 1,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "7e2726ff-b607-4f09-9840-034b4672fa83",
+            "importance": "preferred",
+            "classification": "evidence_missing",
+            "weight": 1,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 1,
+            "exclusion_reason": null
+          },
+          {
+            "requirement_uuid": "d6d45574-73e8-4561-ac3f-f10c00808ef5",
+            "importance": "required",
+            "classification": "evidence_missing",
+            "weight": 2,
+            "classification_credit": 0.0,
+            "earned_weighted_credit": 0.0,
+            "possible_weighted_credit": 2,
+            "exclusion_reason": null
+          }
+        ],
+        "percentage": 23.5,
+        "earned_weighted_credit": 4.0,
+        "possible_weighted_credit": 17,
+        "scored_qualification_count": 11,
+        "unspecified_qualification_uuids": [],
+        "constraint_uuids": [
+          "4271ce65-233c-400b-afc5-af2ae3e953ca",
+          "88ebdb9a-c3d4-4ac5-97c8-7f8472542e7b"
+        ]
+      }
+    },
+    "resume": {
+      "approved": true,
+      "text": "Sample Candidate\n\nEXPERIENCE\n\nEngineering Manager | Example Company\n2018-01 – 2022-12\n- Assigned responsibilities, coached the engineers, and led weekly delivery reviews.\n  Result: The team launched the reliability improvements.\n\nEDUCATION\n\nBachelor of Science | Computer Science | Example University | Completed | 2011\n\nMaster of Science | Artificial Intelligence | Example Institute | In progress\n",
+      "selection": {
+        "role_ids": [
+          "ff76bede-8e44-4acb-ab81-f202a8dcf547"
+        ],
+        "story_ids": [
+          "6a2b07c7-5419-48db-879b-df179fc8ef34"
+        ],
+        "education_ids": [
+          "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+          "6bd0e2c5-4a39-4d85-bc99-01009650c622"
+        ]
+      }
+    },
+    "guide": {
+      "guide_uuid": "ad969889-3484-421a-8a2d-c192cd9d9665",
+      "company_notes": [
+        {
+          "statement": "Google's site highlights products and features across Search and Google Workspace.",
+          "source_uuid": "150c410b-eea4-494a-aa80-d1160a7acc6c",
+          "excerpt": "Explore our products and features across Search, Google Workspace, and more"
+        }
+      ],
+      "documented_hiring_information": [],
+      "practice_questions": [
+        {
+          "requirement_uuid": "bef61493-5ca6-4bd7-9832-52c0e9ad9784",
+          "question": "What completed undergraduate qualification do you hold, and where and when did you complete it?",
+          "answer_draft": "I completed a Bachelor of Science in Computer Science at Example University in 2011.",
+          "clarification": null,
+          "evidence": [
+            {
+              "record_type": "education",
+              "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+              "field_name": "qualification",
+              "excerpt": "Bachelor of Science"
+            },
+            {
+              "record_type": "education",
+              "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+              "field_name": "status",
+              "excerpt": "completed"
+            },
+            {
+              "record_type": "education",
+              "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+              "field_name": "institution",
+              "excerpt": "Example University"
+            },
+            {
+              "record_type": "education",
+              "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+              "field_name": "field_of_study",
+              "excerpt": "Computer Science"
+            },
+            {
+              "record_type": "education",
+              "record_uuid": "18cebf1e-0bce-413c-80d9-8a373afdd88c",
+              "field_name": "completion_date",
+              "excerpt": "2011"
+            }
+          ]
+        },
+        {
+          "requirement_uuid": "5adf2e12-5f9d-421c-ac08-dc88a6bd2410",
+          "question": "Describe your software development experience, including specific examples of testing and launching software products and the dates you did that work.",
+          "answer_draft": null,
+          "clarification": "What software development work have you done, and what are the dates and examples of your product testing and launches?",
+          "evidence": []
+        },
+        {
+          "requirement_uuid": "8501e639-dabd-4825-97f5-910fd7bc4265",
+          "question": "What back-end and front-end technologies have you used in full-stack development, and what projects and dates demonstrate that experience?",
+          "answer_draft": null,
+          "clarification": "Please provide examples of your back-end and front-end development work, including technologies used and dates or durations.",
+          "evidence": []
+        },
+        {
+          "requirement_uuid": "8b601ae4-8839-4371-b257-0639d93ab1ec",
+          "question": "Tell me about a software design or architecture decision you worked on, what your contribution was, and when you did it.",
+          "answer_draft": null,
+          "clarification": "What software design or architecture work have you done, what was your personal contribution, and during what dates?",
+          "evidence": []
+        },
+        {
+          "requirement_uuid": "49f44cac-8114-4588-bb01-e5c755053a19",
+          "question": "Describe a team initiative where you led or supported people through delivery. What did you personally do, and what was the outcome?",
+          "answer_draft": "For a service reliability initiative, I assigned responsibilities, coached the engineers, and led weekly delivery reviews; the team launched the reliability improvements.",
+          "clarification": null,
+          "evidence": [
+            {
+              "record_type": "story",
+              "record_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+              "field_name": "situation",
+              "excerpt": "A service reliability initiative"
+            },
+            {
+              "record_type": "story",
+              "record_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+              "field_name": "action",
+              "excerpt": "Assigned responsibilities, coached the engineers, and led weekly delivery reviews."
+            },
+            {
+              "record_type": "story",
+              "record_uuid": "6a2b07c7-5419-48db-879b-df179fc8ef34",
+              "field_name": "result",
+              "excerpt": "The team launched the reliability improvements."
+            }
+          ]
+        }
+      ]
+    },
+    "sources": [
+      {
+        "source_uuid": "150c410b-eea4-494a-aa80-d1160a7acc6c",
+        "url": "https://about.google/",
+        "title": "About Google: Our products, technology and company information - About Google",
+        "retrieved_at": "2026-11-20T21:47:40.158721+00:00",
+        "text_sha256": "fc793d241a4b6a8b3df2c98ea49535fe69f087a05aef5f47a4c7d4216cc3c236"
+      }
+    ],
+    "practice": {
+      "status": "active",
+      "phase": "review",
+      "question_number": 1,
+      "request_count": 2,
+      "last_error": null,
+      "context_outdated": false,
+      "guide_uuid": "ad969889-3484-421a-8a2d-c192cd9d9665",
+      "question": "What completed undergraduate qualification do you hold, and where and when did you complete it?",
+      "history": [
+        {
+          "question_number": 1,
+          "event": "evaluated",
+          "phase": "main",
+          "followup_question": null,
+          "ratings": {
+            "relevance": 4,
+            "structure": 4,
+            "specificity": 3,
+            "ownership": 4,
+            "results": 3,
+            "clarity": 4
+          },
+          "profile_correction_suggestions": [
+            "The institution and year you gave differ from the education details in the approved profile. Verify them and, if needed, separately review and approve the corrected career facts."
+          ]
+        },
+        {
+          "question_number": 1,
+          "event": "evaluated",
+          "phase": "followup",
+          "followup_question": "Can you confirm the exact qualification, institution name, and completion year?",
+          "ratings": {
+            "relevance": 5,
+            "structure": 4,
+            "specificity": 5,
+            "ownership": 4,
+            "results": 3,
+            "clarity": 4
+          },
+          "profile_correction_suggestions": [
+            "The education details differ from the approved profile; separately review and approve the accurate details if needed."
+          ]
+        }
+      ]
+    }
+  },
+  "independent_checks": {
+    "response_hashes": "24 of 24 matched",
+    "jd_hash_and_13_excerpts": "matched",
+    "match_source_hashes_and_evidence": "validated",
+    "score_and_all_contributions": "recomputed exactly",
+    "resume_render": "matched fictional approved records",
+    "guide_citations_and_five_questions": "validated against uploaded source snapshot",
+    "practice_guide_link": "matched current guide"
+  }
+}

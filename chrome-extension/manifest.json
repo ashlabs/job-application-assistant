@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Job Application Assistant — JD Capture",
+  "version": "0.1.0",
+  "description": "Preview, edit, and save job descriptions with source metadata.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_title": "Capture job description",
+    "default_popup": "popup.html"
+  }
+}
